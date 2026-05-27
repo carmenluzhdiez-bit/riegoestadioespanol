@@ -19,7 +19,7 @@
     --red: #ef4444;
     --blue: #38bdf8;
     --text: #e2f0e8;
-    --muted: #5a7a64;
+    --muted: #8aaa94;
     --font-head: 'Syne', sans-serif;
     --font-mono: 'DM Mono', monospace;
   }
@@ -1596,14 +1596,6 @@ function buildWifi() {
     div("stat-card", lbl("Intermitente") + val("v-amber", warn) + sub("revisión")) +
     div("stat-card", lbl("Sin señal") + val("v-red", off) + sub("sin conexión"));
 
-  var ap = document.getElementById("ssid-points");
-  var apHtml = "";
-  for (var i = 0; i < ACCESS_POINTS.length; i++) {
-    var p = ACCESS_POINTS[i];
-    apHtml += '<div class="ssid-chip"><span>📍 ' + p.loc + '</span>&nbsp;·&nbsp;<strong>' + p.ssid + '</strong>&nbsp;·&nbsp;<span>' + p.signal + '</span></div>';
-  }
-  ap.innerHTML = apHtml;
-
   var canales = [];
   for (var i = 0; i < WIFI_SECTORS.length; i++) {
     var c = WIFI_SECTORS[i].canal;
@@ -2826,9 +2818,10 @@ function saveCtrlModal() {
 }
 
 /* ==============================================
-   SINCRONIZACIÓN — storage compartido entre dispositivos
+   SINCRONIZACIÓN — Firebase Realtime Database
 ============================================== */
-var STORAGE_KEY = "riego-ee-data";
+var FB_URL = "https://riego-estadio-espanol-default-rtdb.firebaseio.com/riego-ee-data";
+var FB_KEY  = "AIzaSyBgxVOk_OAh2XTouD9gLw5rycaNF-OWLnU";
 
 function saveToStorage() {
   if (currentRole !== "admin") return;
@@ -2838,32 +2831,35 @@ function saveToStorage() {
     dates: DATES,
     savedAt: new Date().toISOString()
   };
-  try {
-    window.storage.set(STORAGE_KEY, JSON.stringify(data), true)
-      .then(function() { showSyncBadge("✓ Sincronizado"); })
-      .catch(function() { showSyncBadge("⚠ Error al guardar"); });
-  } catch(e) { showSyncBadge("⚠ Sin storage"); }
+  fetch(FB_URL + ".json?auth=" + FB_KEY, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  })
+  .then(function(r) {
+    if (r.ok) showSyncBadge("✓ Sincronizado");
+    else showSyncBadge("⚠ Error al guardar");
+  })
+  .catch(function() { showSyncBadge("⚠ Sin conexión"); });
 }
 
 function loadFromStorage(callback) {
-  try {
-    window.storage.get(STORAGE_KEY, true)
-      .then(function(result) {
-        if (result && result.value) {
-          var data = JSON.parse(result.value);
-          if (data.controllers) CONTROLLERS = data.controllers;
-          if (data.programs)    PROGRAMS    = data.programs;
-          if (data.dates)       DATES       = data.dates;
-          WIFI_SECTORS = CONTROLLERS.map(function(c) {
-            return { n:c.n, name:c.name, ssid:c.ssid, pass:c.pass, serie:c.serie, obs:c.obs, canal:c.canal };
-          });
-          if (PROGRAMS.length > 0)
-            nextId = Math.max.apply(null, PROGRAMS.map(function(p){ return p.id; })) + 1;
-        }
-        if (callback) callback();
-      })
-      .catch(function() { if (callback) callback(); });
-  } catch(e) { if (callback) callback(); }
+  fetch(FB_URL + ".json?auth=" + FB_KEY)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.controllers) {
+      CONTROLLERS = data.controllers;
+      PROGRAMS    = data.programs    || PROGRAMS;
+      DATES       = data.dates       || DATES;
+      WIFI_SECTORS = CONTROLLERS.map(function(c) {
+        return { n:c.n, name:c.name, ssid:c.ssid, pass:c.pass, serie:c.serie, obs:c.obs, canal:c.canal };
+      });
+      if (PROGRAMS.length > 0)
+        nextId = Math.max.apply(null, PROGRAMS.map(function(p){ return p.id; })) + 1;
+    }
+    if (callback) callback();
+  })
+  .catch(function() { if (callback) callback(); });
 }
 
 var syncTimer = null;
