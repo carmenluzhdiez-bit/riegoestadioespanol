@@ -756,8 +756,13 @@
 
       <!-- PASO 2: Programa (A/B/C/D) -->
       <div class="field" id="field-programa">
-        <label><span class="step-num">2</span> Programa</label>
-        <div id="ed-programa-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <label><span class="step-num">2</span> Nombre del programa</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="ed-prog-nombre" placeholder="ej. A, B, PGA, Nocturno, Verano…"
+            style="flex:1;min-width:140px;padding:7px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.8rem;outline:none">
+          <div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted)">o elige base:</div>
+          <div id="ed-programa-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        </div>
         <div id="ed-programa-desc" style="font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);margin-top:6px;line-height:1.5"></div>
       </div>
 
@@ -885,12 +890,50 @@
 <div class="pane" id="pane-config">
   <div class="stats-row" id="cfg-stats"></div>
 
+  <!-- GRUPOS DE BOMBA -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <div class="section-title" style="margin:0">Grupos de bomba compartida</div>
+    <button onclick="openBombaModal(null)" style="padding:6px 14px;background:var(--amber);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">+ Nueva bomba</button>
+  </div>
+  <div id="cfg-bomba-list" style="margin-bottom:28px"></div>
+
   <!-- LISTA DE CONTROLADORES -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
     <div class="section-title" style="margin:0">Controladores del sistema</div>
     <button onclick="openCtrlModal(null)" style="padding:6px 14px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">+ Nuevo controlador</button>
   </div>
   <div id="cfg-ctrl-list"></div>
+</div>
+
+<!-- MODAL GRUPOS DE BOMBA -->
+<div id="bomba-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;overflow-y:auto;padding:20px">
+  <div style="max-width:480px;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+    <div style="padding:16px 20px;background:var(--panel2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span id="bomba-modal-title" style="font-weight:700;font-size:1rem">Grupo de bomba</span>
+      <button onclick="closeBombaModal()" style="background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div class="field">
+        <label>Nombre de la bomba</label>
+        <input type="text" id="bm-name" placeholder="ej. Bomba D">
+      </div>
+      <div class="field">
+        <label>Ícono / letra identificadora</label>
+        <input type="text" id="bm-icon" placeholder="ej. D" maxlength="3"
+          style="width:80px;text-align:center;font-size:1.1rem;font-weight:700">
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Controladores en este grupo</div>
+        <div style="font-size:0.62rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:8px">Marca los controladores que comparten esta bomba</div>
+        <div id="bm-sectors-list" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px"></div>
+      </div>
+      <div id="bomba-modal-warning" style="display:none;font-family:var(--font-mono);font-size:0.72rem;color:var(--red)"></div>
+      <div style="display:flex;gap:8px;padding-top:6px">
+        <button onclick="saveBombaModal()" style="flex:1;padding:10px;background:var(--amber);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.82rem;font-weight:700;cursor:pointer">Guardar</button>
+        <button onclick="closeBombaModal()" style="padding:10px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--font-mono);font-size:0.82rem;cursor:pointer">Cancelar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL EDITAR/CREAR CONTROLADOR -->
@@ -945,6 +988,18 @@
           <button onclick="addZonaRow()" style="font-size:0.65rem;font-family:var(--font-mono);padding:3px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--green);cursor:pointer">+ Zona</button>
         </div>
         <div id="m-zonas-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Programas de referencia (A/B/C…)</div>
+          <button onclick="addProgRefRow()" style="font-size:0.65rem;font-family:var(--font-mono);padding:3px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--green);cursor:pointer">+ Programa</button>
+        </div>
+        <div style="font-size:0.62rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:8px">Define los programas base del controlador (letra, horario típico, días y zonas que activa)</div>
+        <div style="display:grid;grid-template-columns:44px 55px 80px 1fr 24px;gap:4px;padding-bottom:4px;font-size:0.58rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <span>Letra</span><span>Inicio</span><span>Días</span><span>Zonas / descripción</span><span></span>
+        </div>
+        <div id="m-progs-list" style="display:flex;flex-direction:column;gap:4px"></div>
       </div>
 
       <div id="modal-warning" style="display:none;font-family:var(--font-mono);font-size:0.72rem;color:var(--red)"></div>
@@ -1809,6 +1864,9 @@ function selectPrograma(letter, btn) {
   var btns = document.querySelectorAll("#ed-programa-btns .pg-btn");
   for (var i = 0; i < btns.length; i++) btns[i].classList.remove("on");
   btn.classList.add("on");
+  // Rellenar campo nombre libre
+  var nombreEl = document.getElementById("ed-prog-nombre");
+  if (nombreEl) nombreEl.value = (letter === "NUEVO") ? "" : letter;
   var sectorN = parseInt(document.getElementById("ed-sector").value, 10);
   var ctrl = null;
   for (var i = 0; i < CONTROLLERS.length; i++) {
@@ -1816,7 +1874,7 @@ function selectPrograma(letter, btn) {
   }
   if (ctrl) {
     updateProgramaDesc(ctrl);
-    buildZonasCheckboxes(ctrl);   // reconstruye zonas con minutos del programa elegido
+    buildZonasCheckboxes(ctrl);
     prefillFromPrograma(ctrl);
   }
 }
@@ -2145,7 +2203,12 @@ function addProgram() {
   if (!startStr || !dur || dur < 1) { warn.style.display = "block"; warn.textContent = "⚠ Completa hora y duración."; return; }
   if (zonasIds.length === 0) { warn.style.display = "block"; warn.textContent = "⚠ Selecciona al menos una zona."; return; }
 
-  var prog = { id: nextId++, sectorN: sectorN, sectorName: sectorName, programa: selectedPrograma, zonas: zonasIds, zonasLabels: zonasLabels, zonasConMin: zonasConMin, start: timeToMin(startStr), dur: dur, freqMode: freqMode, notes: notes };
+  // Nombre del programa: campo libre tiene prioridad, si está vacío usa selectedPrograma
+  var progNombreEl = document.getElementById("ed-prog-nombre");
+  var progNombre = progNombreEl ? progNombreEl.value.trim() : "";
+  if (!progNombre) progNombre = selectedPrograma || "A";
+
+  var prog = { id: nextId++, sectorN: sectorN, sectorName: sectorName, programa: progNombre, zonas: zonasIds, zonasLabels: zonasLabels, zonasConMin: zonasConMin, start: timeToMin(startStr), dur: dur, freqMode: freqMode, notes: notes };
 
   if (freqMode === "dias") {
     prog.days = getSelectedDays();
@@ -2648,14 +2711,142 @@ function showTab_config() {
 }
 
 function buildConfig() {
-  // Stats
   document.getElementById("cfg-stats").innerHTML =
     div("stat-card", lbl("Controladores") + val("v-blue", CONTROLLERS.length) + sub("en sistema")) +
-    div("stat-card", lbl("Zonas totales") + val("v-green", CONTROLLERS.reduce(function(s,c){ return s + c.zonas.length; }, 0)) + sub("válvulas")) +
+    div("stat-card", lbl("Grupos de bomba") + val("v-amber", PUMP_GROUPS.length) + sub("compartida")) +
     div("stat-card", lbl("WiFi OK") + val("v-green", CONTROLLERS.filter(function(c){ return obsStatus(c.obs)==="ok"; }).length) + sub("conectados")) +
     div("stat-card", lbl("Sin señal") + val("v-red", CONTROLLERS.filter(function(c){ return obsStatus(c.obs)!=="ok"; }).length) + sub("revisar"));
 
+  renderBombaList();
   renderCtrlList();
+}
+
+function renderBombaList() {
+  var list = document.getElementById("cfg-bomba-list");
+  if (!list) return;
+  if (PUMP_GROUPS.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;padding:12px">Sin grupos de bomba definidos.</div>';
+    return;
+  }
+  var html = "";
+  for (var i = 0; i < PUMP_GROUPS.length; i++) {
+    var g = PUMP_GROUPS[i];
+    // Build sector names
+    var ctrlNames = [];
+    for (var si = 0; si < g.sectors.length; si++) {
+      for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+        if (CONTROLLERS[ci].n === g.sectors[si]) { ctrlNames.push("N°" + CONTROLLERS[ci].n + " " + CONTROLLERS[ci].name); break; }
+      }
+    }
+    html += '<div class="cfg-ctrl-row">';
+    html += '<div class="cfg-num-badge" style="background:var(--amber);color:#000;font-size:0.9rem">' + (g.icon || g.id.slice(-1).toUpperCase()) + '</div>';
+    html += '<div class="cfg-info">';
+    html += '<div class="cfg-ctrl-name">' + g.name + '</div>';
+    html += '<div class="cfg-ctrl-sub">' + (ctrlNames.length > 0 ? ctrlNames.join(" · ") : "Sin controladores asignados") + '</div>';
+    html += '</div>';
+    html += '<button class="cfg-edit-btn" onclick="openBombaModal(\'' + g.id + '\')">✎ Editar</button>';
+    html += '<button class="cfg-del-btn" onclick="deleteBomba(\'' + g.id + '\')">✕</button>';
+    html += '</div>';
+  }
+  list.innerHTML = html;
+}
+
+var editingBombaId = null;
+
+function openBombaModal(id) {
+  editingBombaId = id;
+  var modal = document.getElementById("bomba-modal");
+  var title = document.getElementById("bomba-modal-title");
+  var warn  = document.getElementById("bomba-modal-warning");
+  warn.style.display = "none";
+
+  // Build checkboxes for all controllers
+  var sectorsHtml = "";
+  var selectedSectors = [];
+  if (id !== null) {
+    for (var i = 0; i < PUMP_GROUPS.length; i++) {
+      if (PUMP_GROUPS[i].id === id) { selectedSectors = PUMP_GROUPS[i].sectors; break; }
+    }
+  }
+  var sorted = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  for (var i = 0; i < sorted.length; i++) {
+    var c = sorted[i];
+    var checked = selectedSectors.indexOf(c.n) >= 0 ? " checked" : "";
+    sectorsHtml += '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-family:var(--font-mono);font-size:0.75rem">';
+    sectorsHtml += '<input type="checkbox" value="' + c.n + '"' + checked + ' style="accent-color:var(--amber);width:16px;height:16px">';
+    sectorsHtml += 'N°' + c.n + ' · ' + c.name;
+    sectorsHtml += '</label>';
+  }
+  document.getElementById("bm-sectors-list").innerHTML = sectorsHtml;
+
+  if (id === null) {
+    title.textContent = "Nueva bomba";
+    document.getElementById("bm-name").value = "";
+    document.getElementById("bm-icon").value = "";
+  } else {
+    var g = null;
+    for (var i = 0; i < PUMP_GROUPS.length; i++) { if (PUMP_GROUPS[i].id === id) { g = PUMP_GROUPS[i]; break; } }
+    if (!g) return;
+    title.textContent = "Editar " + g.name;
+    document.getElementById("bm-name").value = g.name;
+    document.getElementById("bm-icon").value = g.icon || "";
+  }
+  modal.style.display = "block";
+}
+
+function closeBombaModal() {
+  document.getElementById("bomba-modal").style.display = "none";
+  editingBombaId = null;
+}
+
+function saveBombaModal() {
+  var warn = document.getElementById("bomba-modal-warning");
+  var nameVal = document.getElementById("bm-name").value.trim();
+  var iconVal = document.getElementById("bm-icon").value.trim();
+  if (!nameVal) { warn.style.display = "block"; warn.textContent = "⚠ Escribe un nombre para la bomba."; return; }
+
+  // Get selected sectors
+  var cbs = document.querySelectorAll("#bm-sectors-list input[type=checkbox]:checked");
+  var sectors = [];
+  var names = [];
+  for (var i = 0; i < cbs.length; i++) {
+    var n = parseInt(cbs[i].value, 10);
+    sectors.push(n);
+    for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+      if (CONTROLLERS[ci].n === n) { names.push(CONTROLLERS[ci].name); break; }
+    }
+  }
+
+  if (editingBombaId === null) {
+    // New group — generate id
+    var newId = "bomba-" + nameVal.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    PUMP_GROUPS.push({ id: newId, name: nameVal, icon: iconVal || nameVal.charAt(nameVal.lastIndexOf(" ")+1), sectors: sectors, names: names });
+  } else {
+    for (var i = 0; i < PUMP_GROUPS.length; i++) {
+      if (PUMP_GROUPS[i].id === editingBombaId) {
+        PUMP_GROUPS[i].name    = nameVal;
+        PUMP_GROUPS[i].icon    = iconVal || PUMP_GROUPS[i].icon;
+        PUMP_GROUPS[i].sectors = sectors;
+        PUMP_GROUPS[i].names   = names;
+        break;
+      }
+    }
+  }
+  closeBombaModal();
+  buildConfig();
+  updateConflictBadge();
+  saveToStorage();
+}
+
+function deleteBomba(id) {
+  var g = null;
+  for (var i = 0; i < PUMP_GROUPS.length; i++) { if (PUMP_GROUPS[i].id === id) { g = PUMP_GROUPS[i]; break; } }
+  if (!g) return;
+  if (!confirm("¿Eliminar el grupo " + g.name + "? Los programas de esos sectores ya no detectarán conflictos entre sí.")) return;
+  PUMP_GROUPS = PUMP_GROUPS.filter(function(x) { return x.id !== id; });
+  buildConfig();
+  updateConflictBadge();
+  saveToStorage();
 }
 
 function renderCtrlList() {
@@ -2709,7 +2900,6 @@ function openCtrlModal(n) {
   warn.style.display = "none";
 
   if (n === null) {
-    // New controller
     title.textContent = "Nuevo controlador";
     document.getElementById("m-num").value   = nextCtrlNum();
     document.getElementById("m-num").disabled = false;
@@ -2720,27 +2910,42 @@ function openCtrlModal(n) {
     document.getElementById("m-obs").value   = "OK";
     document.getElementById("m-serie").value = "";
     document.getElementById("m-zonas-list").innerHTML = "";
-    addZonaRow(); // start with one empty zona
+    document.getElementById("m-progs-list").innerHTML = "";
+    progRefRowIdx = 0;
+    addZonaRow();
+    addProgRefRow("A", "", "", "");
   } else {
-    // Edit existing
     var ctrl = null;
     for (var i = 0; i < CONTROLLERS.length; i++) { if (CONTROLLERS[i].n === n) { ctrl = CONTROLLERS[i]; break; } }
     if (!ctrl) return;
     title.textContent = "Editar N°" + n + " · " + ctrl.name;
     document.getElementById("m-num").value   = ctrl.n;
-    document.getElementById("m-num").disabled = true; // can't change number of existing
+    document.getElementById("m-num").disabled = true;
     document.getElementById("m-name").value  = ctrl.name;
     document.getElementById("m-clave").value = ctrl.clave;
     document.getElementById("m-ssid").value  = ctrl.ssid !== "sin señal" ? ctrl.ssid : "";
     document.getElementById("m-pass").value  = ctrl.pass !== "sin señal" ? ctrl.pass : "";
     document.getElementById("m-obs").value   = ctrl.obs;
     document.getElementById("m-serie").value = ctrl.serie !== "—" ? ctrl.serie : "";
-    // Load zonas
+    // Cargar zonas
     var zContainer = document.getElementById("m-zonas-list");
     zContainer.innerHTML = "";
+    zonaRowIdx = 0;
     for (var zi = 0; zi < ctrl.zonas.length; zi++) {
-      var z = ctrl.zonas[zi];
-      addZonaRow(String(z.z), z.desc);
+      addZonaRow(String(ctrl.zonas[zi].z), ctrl.zonas[zi].desc);
+    }
+    // Cargar programas de referencia
+    var pContainer = document.getElementById("m-progs-list");
+    pContainer.innerHTML = "";
+    progRefRowIdx = 0;
+    var prefs = ctrl.programas || [];
+    if (prefs.length > 0) {
+      for (var pi = 0; pi < prefs.length; pi++) {
+        var pr = prefs[pi];
+        if (pr.durMin > 0) addProgRefRow(pr.pg, pr.inicio, pr.dias, pr.zonas);
+      }
+    } else {
+      addProgRefRow("A", "", "", "");
     }
   }
   modal.style.display = "block";
@@ -2758,6 +2963,8 @@ function closeCtrlModal() {
 }
 
 var zonaRowIdx = 0;
+var progRefRowIdx = 0;
+
 function addZonaRow(zNum, zDesc) {
   var container = document.getElementById("m-zonas-list");
   var idx = zonaRowIdx++;
@@ -2775,6 +2982,27 @@ function addZonaRow(zNum, zDesc) {
 
 function removeZonaRow(idx) {
   var row = document.getElementById("zrow-" + idx);
+  if (row) row.parentElement.removeChild(row);
+}
+
+function addProgRefRow(letra, inicio, dias, zonaDesc, durMin) {
+  var container = document.getElementById("m-progs-list");
+  if (!container) return;
+  var idx = progRefRowIdx++;
+  var row = document.createElement("div");
+  row.id = "prow-" + idx;
+  row.style.cssText = "display:grid;grid-template-columns:44px 55px 80px 1fr 24px;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--border)";
+  row.innerHTML =
+    '<input type="text" placeholder="A" value="' + (letra||"") + '" style="padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--green);font-family:var(--font-mono);font-size:0.75rem;font-weight:700;text-align:center">' +
+    '<input type="text" placeholder="06:00" value="' + (inicio||"") + '" style="padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--blue);font-family:var(--font-mono);font-size:0.72rem">' +
+    '<input type="text" placeholder="L-X-V" value="' + (dias||"") + '" style="padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem">' +
+    '<input type="text" placeholder="Zonas y descripción" value="' + (zonaDesc||"") + '" style="padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem">' +
+    '<button onclick="removeProgRefRow(' + idx + ')" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:0">✕</button>';
+  container.appendChild(row);
+}
+
+function removeProgRefRow(idx) {
+  var row = document.getElementById("prow-" + idx);
   if (row) row.parentElement.removeChild(row);
 }
 
@@ -2811,8 +3039,21 @@ function saveCtrlModal() {
     return;
   }
 
+  // Leer programas de referencia del modal
+  var programasRef = [];
+  var progRows = document.querySelectorAll("#m-progs-list > div");
+  for (var i = 0; i < progRows.length; i++) {
+    var inputs = progRows[i].querySelectorAll("input[type=text]");
+    if (inputs.length >= 4) {
+      var pgLetra = inputs[0].value.trim();
+      var pgInicio = inputs[1].value.trim();
+      var pgDias   = inputs[2].value.trim();
+      var pgZonas  = inputs[3].value.trim();
+      if (pgLetra) programasRef.push({ pg: pgLetra, inicio: pgInicio, dias: pgDias, zonas: pgZonas, durMin: 30 });
+    }
+  }
+
   if (editingCtrlN === null) {
-    // Check number not already used
     for (var i = 0; i < CONTROLLERS.length; i++) {
       if (CONTROLLERS[i].n === numVal) {
         warn.style.display = "block";
@@ -2820,14 +3061,12 @@ function saveCtrlModal() {
         return;
       }
     }
-    // Add new
     CONTROLLERS.push({
       n: numVal, name: nameVal, clave: claveVal,
       ssid: ssidVal, pass: passVal, serie: serieVal, obs: obsVal, canal: canalVal,
-      zonas: zonas, programas: []
+      zonas: zonas, programas: programasRef
     });
   } else {
-    // Update existing
     for (var i = 0; i < CONTROLLERS.length; i++) {
       if (CONTROLLERS[i].n === editingCtrlN) {
         CONTROLLERS[i].name  = nameVal;
@@ -2838,6 +3077,7 @@ function saveCtrlModal() {
         CONTROLLERS[i].serie = serieVal;
         CONTROLLERS[i].canal = canalVal;
         CONTROLLERS[i].zonas = zonas;
+        CONTROLLERS[i].programas = programasRef;
         break;
       }
     }
@@ -2868,6 +3108,7 @@ function saveToStorage() {
     controllers: CONTROLLERS,
     programs: PROGRAMS,
     dates: DATES,
+    pumpGroups: PUMP_GROUPS,
     savedAt: new Date().toISOString()
   };
   fetch(FB_URL + ".json", {
@@ -2890,6 +3131,7 @@ function loadFromStorage(callback) {
       CONTROLLERS = data.controllers;
       PROGRAMS    = data.programs    || PROGRAMS;
       DATES       = data.dates       || DATES;
+      if (data.pumpGroups && data.pumpGroups.length > 0) PUMP_GROUPS = data.pumpGroups;
       WIFI_SECTORS = CONTROLLERS.map(function(c) {
         return { n:c.n, name:c.name, ssid:c.ssid, pass:c.pass, serie:c.serie, obs:c.obs, canal:c.canal };
       });
