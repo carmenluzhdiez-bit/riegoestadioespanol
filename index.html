@@ -2193,7 +2193,18 @@ function addProgram() {
     if (CONTROLLERS[i].n === sectorN) { sectorName = CONTROLLERS[i].name; break; }
   }
   var startStr = document.getElementById("ed-start").value;
-  var dur = parseInt(document.getElementById("ed-dur").value, 10);
+  // Calcular duración sumando zonas activas en tiempo real
+  var dur = 0;
+  var durIdx = 0;
+  while (true) {
+    var durCb = document.getElementById("zona-cb-" + durIdx);
+    var durInp = document.getElementById("zona-min-" + durIdx);
+    if (!durCb) break;
+    if (durCb.checked && durInp) dur += parseInt(durInp.value, 10) || 0;
+    durIdx++;
+  }
+  // Fallback al campo oculto si no hay zonas
+  if (dur === 0) dur = parseInt(document.getElementById("ed-dur").value, 10) || 0;
   var notes = document.getElementById("ed-notes").value;
   var warn = document.getElementById("ed-warning");
   var zonasIds = getSelectedZonas();
