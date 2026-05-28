@@ -1360,9 +1360,11 @@ function copyText(txt, btn) {
 ============================================== */
 function programRunsOnDate(p, dateIdx) {
   var dateStr = DATES[dateIdx];
+  if (!dateStr) return false;
   if (p.freqMode === "dias") {
     var letter = dateToLetter(dateStr);
-    return p.days.indexOf(letter) >= 0;
+    var days = p.days || [];
+    return days.indexOf(letter) >= 0;
   }
   if (p.freqMode === "intervalo") {
     if (!p.cycleStart) return false;
@@ -1657,13 +1659,19 @@ function buildConflictos() {
     for (var a = 0; a < progs.length; a++) {
       for (var b = a + 1; b < progs.length; b++) {
         var pa = progs[a], pb = progs[b];
+        // Solo conflicto entre sectores DISTINTOS
+        if (pa.sectorN === pb.sectorN) continue;
         // Check day overlap
         var sharedDays = [];
-        for (var d = 0; d < pa.days.length; d++) {
-          if (pb.days.indexOf(pa.days[d]) >= 0) sharedDays.push(pa.days[d]);
+        var paDays = pa.days || [], pbDays = pb.days || [];
+        for (var d = 0; d < paDays.length; d++) {
+          if (pbDays.indexOf(paDays[d]) >= 0) sharedDays.push(paDays[d]);
         }
         if (pa.freqMode === "manual" || pb.freqMode === "manual") continue;
         if (sharedDays.length === 0 && pa.freqMode === "dias" && pb.freqMode === "dias") continue;
+        // Verificación extra: si ambos son intervalo sin cycleStart, ignorar
+        if (pa.freqMode === "intervalo" && !pa.cycleStart) continue;
+        if (pb.freqMode === "intervalo" && !pb.cycleStart) continue;
         var aEnd = pa.start + pa.dur, bEnd = pb.start + pb.dur;
         if (pa.start < bEnd && pb.start < aEnd) {
           var from = minToHHMM(Math.max(pa.start, pb.start));
@@ -2190,6 +2198,7 @@ function addProgram() {
   updateConflictBadge();
   renderPrograms();
   if (document.getElementById("pane-pmr").classList.contains("active")) buildPMR();
+  if (document.getElementById("pane-controladores").classList.contains("active")) buildControllers();
   saveToStorage();
 }
 
@@ -2321,12 +2330,14 @@ function cancelEdit() {
   if (cancelBtn) cancelBtn.style.display = "none";
   var warn = document.getElementById("ed-warning");
   if (warn) { warn.style.display = "none"; warn.textContent = ""; }
+  renderPrograms(); // quita el resaltado
 }
 function deleteProgram(id) {
   PROGRAMS = PROGRAMS.filter(function(p) { return p.id !== id; });
   renderPrograms();
   updateConflictBadge();
   if (document.getElementById("pane-pmr").classList.contains("active")) buildPMR();
+  if (document.getElementById("pane-controladores").classList.contains("active")) buildControllers();
   saveToStorage();
 }
 
@@ -2361,12 +2372,14 @@ function hasConflictCheck(p) {
     for (var j = 0; j < PROGRAMS.length; j++) {
       var other = PROGRAMS[j];
       if (other.id === p.id) continue;
+      if (other.sectorN === p.sectorN) continue; // mismo controlador no conflictua consigo mismo
       if (g.sectors.indexOf(other.sectorN) < 0) continue;
       if (p.freqMode === "manual" || other.freqMode === "manual") continue;
       var sharedDay = false;
       if (p.freqMode === "dias" && other.freqMode === "dias") {
-        for (var d = 0; d < p.days.length; d++) {
-          if (other.days.indexOf(p.days[d]) >= 0) { sharedDay = true; break; }
+        var pDays = p.days || [], oDays = other.days || [];
+        for (var d = 0; d < pDays.length; d++) {
+          if (oDays.indexOf(pDays[d]) >= 0) { sharedDay = true; break; }
         }
       } else { sharedDay = true; }
       if (!sharedDay) continue;
@@ -2447,14 +2460,17 @@ function renderPrograms() {
           zonasHtml += '</div>';
         }
 
-        html += '<div class="prog-row" style="padding-left:24px">';
+        var isEditing = (editingId === p.id);
+        var rowStyle = 'padding-left:24px;' + (isEditing ? 'background:var(--green-dim);border-left:3px solid var(--green);' : '');
+        html += '<div class="prog-row" id="prog-row-' + p.id + '" style="' + rowStyle + '">';
         html += '<div><span style="font-family:var(--font-mono);font-size:0.72rem">' + minToHHMM(p.start) + '</span> · ' + p.dur + ' min';
+        if (isEditing) html += ' <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--green);margin-left:6px">← editando</span>';
         if (p.notes) html += '<br><span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted)">' + p.notes + '</span>';
         html += zonasHtml + '</div>';
         html += '<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--blue)">' + buildDaysLabel(p) + '</div>';
         html += '<div>' + statusHtml + '</div>';
         html += '<div style="display:flex;gap:6px;align-items:center">';
-        html += '<button class="edit-btn" onclick="editProgram(' + p.id + ')" title="Editar">✎</button>';
+        html += '<button class="edit-btn" onclick="editProgram(' + p.id + ')" title="Editar" style="' + (isEditing ? 'background:var(--green);color:#000;' : '') + '">✎</button>';
         html += '<button class="del-btn"  onclick="deleteProgram(' + p.id + ')" title="Eliminar">✕</button>';
         html += '</div>';
         html += '</div>';
@@ -2539,23 +2555,62 @@ function renderControllers() {
       }
     }
 
-    // Programs count
-    var activePgs = 0;
-    var progs2 = c.programas || [];
-    for (var pi = 0; pi < progs2.length; pi++) { if (progs2[pi].durMin > 0) activePgs++; }
+    // Programs count — use system programs, fall back to Excel reference
+    var userPgs = [];
+    for (var pi = 0; pi < PROGRAMS.length; pi++) {
+      if (PROGRAMS[pi].sectorN === c.n) userPgs.push(PROGRAMS[pi]);
+    }
+    var activePgs = userPgs.length;
 
-    // Programas rows
+    // PROGRAMAS DEL SISTEMA (activos, editables)
+    var sistemaPgHtml = "";
+    if (userPgs.length > 0) {
+      sistemaPgHtml += '<div style="padding:8px 16px;background:var(--panel2);border-bottom:1px solid var(--border)">';
+      sistemaPgHtml += '<div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">● Programas activos en sistema</div>';
+      sistemaPgHtml += '<div style="display:grid;grid-template-columns:55px 1fr 80px 55px;gap:6px;padding-bottom:4px;font-size:0.6rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:2px"><span>Inicio</span><span>Descripción</span><span>Días</span><span>Duración</span></div>';
+      for (var pi = 0; pi < userPgs.length; pi++) {
+        var up = userPgs[pi];
+        var pgColor = up.programa === "A" ? "#22c55e" : up.programa === "B" ? "#38bdf8" : up.programa === "C" ? "#f59e0b" : "#a78bfa";
+        sistemaPgHtml += '<div style="display:grid;grid-template-columns:55px 1fr 80px 55px;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.72rem;align-items:start">';
+        sistemaPgHtml += '<span style="font-family:var(--font-mono);color:var(--blue)">' + minToHHMM(up.start) + '</span>';
+        var desc = (up.programa ? '<span style="color:' + pgColor + ';font-weight:700">Pg.' + up.programa + '</span> ' : '') + (up.notes || '');
+        if (up.zonasConMin && up.zonasConMin.length > 0) {
+          var zz = up.zonasConMin.map(function(z){ return 'Z'+z.id+' '+z.min+'min'; }).join(' · ');
+          desc += '<br><span style="font-size:0.62rem;color:var(--muted)">' + zz + '</span>';
+        }
+        sistemaPgHtml += '<span style="line-height:1.5">' + desc + '</span>';
+        sistemaPgHtml += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">' + buildDaysLabel(up) + '</span>';
+        sistemaPgHtml += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text)">' + up.dur + ' min</span>';
+        sistemaPgHtml += '</div>';
+      }
+      sistemaPgHtml += '</div>';
+    } else {
+      sistemaPgHtml += '<div style="padding:8px 16px;background:var(--panel2);border-bottom:1px solid var(--border)">';
+      sistemaPgHtml += '<div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted)">Sin programas activos — usa ✏️ Programar Riego para agregar</div>';
+      sistemaPgHtml += '</div>';
+    }
+
+    // REFERENCIA EXCEL (colapsable)
+    var progs2 = c.programas || [];
     var pgHtml = "";
-    for (var pi = 0; pi < progs2.length; pi++) {
-      var pg = progs2[pi];
-      var empty = pg.durMin === 0;
-      var pgColor = pg.pg.charAt(0) === "A" ? "#22c55e" : pg.pg.charAt(0) === "B" ? "#38bdf8" : pg.pg.charAt(0) === "C" ? "#f59e0b" : "#a78bfa";
-      pgHtml += '<div style="display:grid;grid-template-columns:60px 80px 55px 1fr;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.72rem">';
-      pgHtml += '<span style="font-family:var(--font-mono);color:' + pgColor + ';font-weight:700">' + pg.pg + '</span>';
-      pgHtml += '<span style="font-family:var(--font-mono);color:var(--muted);font-size:0.65rem">' + pg.dias + '</span>';
-      pgHtml += '<span style="font-family:var(--font-mono);color:var(--blue)">' + (empty ? "—" : pg.inicio) + '</span>';
-      pgHtml += '<span style="color:' + (empty ? "var(--muted)" : "var(--text)") + ';line-height:1.4">' + (empty ? "Sin riego" : pg.zonas + (pg.durMin ? " · " + pg.durMin + " min" : "")) + '</span>';
-      pgHtml += '</div>';
+    if (progs2.length > 0) {
+      var pgRows = "";
+      for (var pi = 0; pi < progs2.length; pi++) {
+        var pg = progs2[pi];
+        var empty = pg.durMin === 0;
+        var pgColor2 = pg.pg.charAt(0) === "A" ? "#22c55e" : pg.pg.charAt(0) === "B" ? "#38bdf8" : pg.pg.charAt(0) === "C" ? "#f59e0b" : "#a78bfa";
+        pgRows += '<div style="display:grid;grid-template-columns:60px 80px 55px 1fr;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:0.68rem">';
+        pgRows += '<span style="font-family:var(--font-mono);color:' + pgColor2 + ';font-weight:700">' + pg.pg + '</span>';
+        pgRows += '<span style="font-family:var(--font-mono);color:var(--muted);font-size:0.6rem">' + pg.dias + '</span>';
+        pgRows += '<span style="font-family:var(--font-mono);color:var(--blue)">' + (empty ? "—" : pg.inicio) + '</span>';
+        pgRows += '<span style="color:' + (empty ? "var(--muted)" : "var(--text)") + ';line-height:1.4">' + (empty ? "Sin riego" : pg.zonas) + '</span>';
+        pgRows += '</div>';
+      }
+      pgHtml = '<details style="border-bottom:1px solid var(--border)">'
+        + '<summary style="padding:6px 16px;font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);cursor:pointer;list-style:none;background:var(--panel)">▶ Referencia Excel (original)</summary>'
+        + '<div style="padding:6px 16px 10px;background:var(--panel)">'
+        + '<div style="display:grid;grid-template-columns:60px 80px 55px 1fr;gap:6px;padding-bottom:4px;font-size:0.58rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:2px"><span>Prog</span><span>Días</span><span>Inicio</span><span>Zonas</span></div>'
+        + pgRows + '</div></details>';
     }
 
     // Zona rows
@@ -2565,34 +2620,14 @@ function renderControllers() {
       zonaHtml += '<div class="zone-row"><div class="zone-num">Z' + z.z + '</div><div class="zone-desc">' + z.desc + '</div></div>';
     }
 
-    // User programs for this controller
-    var userPgs = [];
-    for (var pi = 0; pi < PROGRAMS.length; pi++) {
-      if (PROGRAMS[pi].sectorN === c.n) userPgs.push(PROGRAMS[pi]);
-    }
-    var userPgHtml = "";
-    if (userPgs.length > 0) {
-      userPgHtml += '<div style="padding:8px 16px;border-top:1px solid var(--border);background:var(--panel)">';
-      userPgHtml += '<div style="font-size:0.6rem;font-family:var(--font-mono);color:var(--green);text-transform:uppercase;margin-bottom:4px">Programas activos en sistema</div>';
-      for (var pi = 0; pi < userPgs.length; pi++) {
-        var up = userPgs[pi];
-        userPgHtml += '<div style="font-size:0.7rem;font-family:var(--font-mono);color:var(--text);padding:2px 0">';
-        userPgHtml += minToHHMM(up.start) + ' · ' + up.dur + ' min · ' + buildDaysLabel(up);
-        if (up.notes) userPgHtml += ' <span style="color:var(--muted)">— ' + up.notes + '</span>';
-        userPgHtml += '</div>';
-      }
-      userPgHtml += '</div>';
-    }
+    var userPgHtml = ""; // ya incluido en sistemaPgHtml arriba
 
     html += '<div class="ctrl-card ' + cardClass + '">';
     html += '<div class="ctrl-header"><div class="ctrl-num">' + c.n + '</div>';
     html += '<div style="flex:1"><div class="ctrl-title"><span class="status-dot ' + dotClass + '"></span>' + c.name + pumpBadgeHtml + '</div>';
-    html += '<div class="ctrl-clave">Clave: ' + (currentRole !== "visitante" ? c.clave : "••••") + ' · ' + c.zonas.length + ' zona' + (c.zonas.length > 1 ? "s" : "") + ' · ' + activePgs + ' prog.</div></div></div>';
-    html += '<div style="padding:8px 16px;background:var(--panel2);border-bottom:1px solid var(--border)">';
-    html += '<div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Programas del Excel</div>';
-    html += '<div style="display:grid;grid-template-columns:60px 80px 55px 1fr;gap:6px;padding-bottom:4px;font-size:0.6rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:2px"><span>Prog</span><span>Días</span><span>Inicio</span><span>Zonas</span></div>';
-    html += pgHtml + '</div>';
-    html += userPgHtml;
+    html += '<div class="ctrl-clave">Clave: ' + (currentRole !== "visitante" ? c.clave : "••••") + ' · ' + c.zonas.length + ' zona' + (c.zonas.length > 1 ? "s" : "") + ' · ' + activePgs + ' prog. activo' + (activePgs !== 1 ? "s" : "") + '</div></div></div>';
+    html += sistemaPgHtml;
+    html += pgHtml;
     html += '<details><summary style="padding:8px 16px;font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span>▶</span> Ver ' + c.zonas.length + ' zona' + (c.zonas.length > 1 ? "s" : "") + ' detalladas</summary>';
     html += '<div class="ctrl-zones">' + zonaHtml + '</div></details>';
     html += '<div class="ctrl-wifi">📶 <span>' + c.ssid + '</span>';
@@ -2661,6 +2696,8 @@ function deleteController(n) {
   });
   buildConfig();
   updateConflictBadge();
+  if (document.getElementById("pane-pmr").classList.contains("active")) buildPMR();
+  if (document.getElementById("pane-wifi").classList.contains("active")) buildWifi();
   saveToStorage();
 }
 
@@ -2814,6 +2851,9 @@ function saveCtrlModal() {
   closeCtrlModal();
   buildConfig();
   editorInitialized = false;
+  updateConflictBadge();
+  if (document.getElementById("pane-pmr").classList.contains("active")) buildPMR();
+  if (document.getElementById("pane-wifi").classList.contains("active")) buildWifi();
   saveToStorage();
 }
 
@@ -2821,7 +2861,6 @@ function saveCtrlModal() {
    SINCRONIZACIÓN — Firebase Realtime Database
 ============================================== */
 var FB_URL = "https://riego-estadio-espanol-default-rtdb.firebaseio.com/riego-ee-data";
-var FB_KEY  = "AIzaSyBgxVOk_OAh2XTouD9gLw5rycaNF-OWLnU";
 
 function saveToStorage() {
   if (currentRole !== "admin") return;
@@ -2831,20 +2870,20 @@ function saveToStorage() {
     dates: DATES,
     savedAt: new Date().toISOString()
   };
-  fetch(FB_URL + ".json?auth=" + FB_KEY, {
+  fetch(FB_URL + ".json", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   })
   .then(function(r) {
     if (r.ok) showSyncBadge("✓ Sincronizado");
-    else showSyncBadge("⚠ Error al guardar");
+    else showSyncBadge("⚠ Error " + r.status);
   })
   .catch(function() { showSyncBadge("⚠ Sin conexión"); });
 }
 
 function loadFromStorage(callback) {
-  fetch(FB_URL + ".json?auth=" + FB_KEY)
+  fetch(FB_URL + ".json")
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data && data.controllers) {
@@ -2915,6 +2954,9 @@ function doLogin() {
   }
 
   // Load shared data then init
+  var loginBtn = document.querySelector("#login-screen button");
+  if (loginBtn) loginBtn.textContent = "Cargando datos...";
+
   loadFromStorage(function() {
     var dayBtns = document.querySelectorAll("#day-picker .day-btn");
     for (var i = 0; i < dayBtns.length; i++) {
