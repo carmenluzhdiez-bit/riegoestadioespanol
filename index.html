@@ -2314,8 +2314,16 @@ function editProgram(id) {
   if (ctrl) buildZonasCheckboxes(ctrl);
 
   // Restore zona selections and minutes from saved program
+  var zonasToRestore = null;
   if (p.zonasConMin && p.zonasConMin.length > 0) {
-    // First uncheck all
+    zonasToRestore = p.zonasConMin;
+  } else if (p.zonas && p.zonas.length > 0) {
+    // Fallback: build from zonas array with default 15 min
+    zonasToRestore = p.zonas.map(function(z) { return { id: z, min: 15 }; });
+  }
+
+  if (zonasToRestore) {
+    // Uncheck all first
     var idx = 0;
     while (document.getElementById("zona-cb-" + idx)) {
       var cb  = document.getElementById("zona-cb-" + idx);
@@ -2326,10 +2334,9 @@ function editProgram(id) {
       if (row) { row.style.background = "var(--panel)"; row.style.opacity = "0.45"; }
       idx++;
     }
-    // Then check saved zones with their minutes
-    for (var zi = 0; zi < p.zonasConMin.length; zi++) {
-      var zz = p.zonasConMin[zi];
-      // Find the row matching this zone id
+    // Check saved zones
+    for (var zi = 0; zi < zonasToRestore.length; zi++) {
+      var zz = zonasToRestore[zi];
       var idx2 = 0;
       while (document.getElementById("zona-cb-" + idx2)) {
         var cb2 = document.getElementById("zona-cb-" + idx2);
@@ -2337,12 +2344,25 @@ function editProgram(id) {
           cb2.checked = true;
           var inp2 = document.getElementById("zona-min-" + idx2);
           var row2 = document.getElementById("zona-row-" + idx2);
-          if (inp2) { inp2.value = zz.min; inp2.disabled = false; }
+          if (inp2) { inp2.value = zz.min || 15; inp2.disabled = false; }
           if (row2) { row2.style.background = "var(--panel2)"; row2.style.opacity = "1"; }
           break;
         }
         idx2++;
       }
+    }
+    recalcTotalDur();
+  } else {
+    // No zona info — uncheck all and let user pick
+    var idx3 = 0;
+    while (document.getElementById("zona-cb-" + idx3)) {
+      var cb3  = document.getElementById("zona-cb-" + idx3);
+      var inp3 = document.getElementById("zona-min-" + idx3);
+      var row3 = document.getElementById("zona-row-" + idx3);
+      cb3.checked = false;
+      if (inp3) inp3.disabled = true;
+      if (row3) { row3.style.background = "var(--panel)"; row3.style.opacity = "0.45"; }
+      idx3++;
     }
     recalcTotalDur();
   }
