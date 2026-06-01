@@ -2918,9 +2918,9 @@ function buildControllers() {
   }
   document.getElementById("ctrl-stats").innerHTML =
     div("stat-card", lbl("Controladores") + val("v-blue", CONTROLLERS.length) + sub("en sistema")) +
-    div("stat-card", lbl("Zonas totales") + val("v-green", totalZonas) + sub("válvulas programables")) +
     div("stat-card", lbl("WiFi OK") + val("v-green", ok) + sub("conectados")) +
-    div("stat-card", lbl("Sin señal / intermitente") + val("v-red", warn + off) + sub("revisar"));
+    div("stat-card", lbl("Señal intermitente") + val("v-amber", warn) + sub("revisar")) +
+    div("stat-card", lbl("Sin señal") + val("v-red", off) + sub("sin conexión"));
 
   var canales = [];
   for (var i = 0; i < CONTROLLERS.length; i++) {
@@ -3072,11 +3072,15 @@ function showTab_config() {
 }
 
 function buildConfig() {
+  var cfgOk   = CONTROLLERS.filter(function(c){ return obsStatus(c.obs)==="ok"; }).length;
+  var cfgWarn = CONTROLLERS.filter(function(c){ return obsStatus(c.obs)==="warn"; }).length;
+  var cfgOff  = CONTROLLERS.filter(function(c){ return obsStatus(c.obs)==="off"; }).length;
   document.getElementById("cfg-stats").innerHTML =
     div("stat-card", lbl("Controladores") + val("v-blue", CONTROLLERS.length) + sub("en sistema")) +
     div("stat-card", lbl("Grupos de bomba") + val("v-amber", PUMP_GROUPS.length) + sub("compartida")) +
-    div("stat-card", lbl("WiFi OK") + val("v-green", CONTROLLERS.filter(function(c){ return obsStatus(c.obs)==="ok"; }).length) + sub("conectados")) +
-    div("stat-card", lbl("Sin señal") + val("v-red", CONTROLLERS.filter(function(c){ return obsStatus(c.obs)!=="ok"; }).length) + sub("revisar"));
+    div("stat-card", lbl("WiFi OK") + val("v-green", cfgOk) + sub("conectados")) +
+    div("stat-card", lbl("Intermitente") + val("v-amber", cfgWarn) + sub("revisar")) +
+    div("stat-card", lbl("Sin señal") + val("v-red", cfgOff) + sub("sin conexión"));
 
   renderBombaList();
   renderCtrlList();
