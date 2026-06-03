@@ -839,16 +839,16 @@
         <div class="field">
           <label>Repetir cada</label>
           <div style="display:flex;align-items:center;gap:10px">
-            <input type="number" id="ed-interval" value="2" min="1" max="30" style="width:70px">
+            <input type="number" id="ed-interval" value="2" min="1" max="30" style="width:70px" oninput="updateFreqPreview()">
             <span style="font-family:var(--font-mono);font-size:0.8rem;color:var(--muted)">días</span>
           </div>
         </div>
         <div class="field">
-          <label>Fecha de inicio del ciclo</label>
-          <input type="date" id="ed-cycle-start">
-        </div>
-        <div style="font-size:0.68rem;font-family:var(--font-mono);color:var(--muted);margin-top:-6px;margin-bottom:10px">
-          Ej: "cada 2 días" desde hoy → riega lun, mié, vie, dom…
+          <label>⚡ Primer día de riego <span style="color:var(--red);font-size:0.65rem">— obligatorio</span></label>
+          <input type="date" id="ed-cycle-start" style="border:2px solid var(--green)" oninput="updateFreqPreview()">
+          <div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--amber);margin-top:4px">
+            ⚠ Si pones hoy, riega desde hoy. Si pones mañana, empieza mañana.
+          </div>
         </div>
       </div>
 
@@ -2466,6 +2466,18 @@ function setFreqMode(mode, btn) {
   var ftabs = document.querySelectorAll(".freq-tab");
   for (var i = 0; i < ftabs.length; i++) ftabs[i].classList.remove("active");
   btn.classList.add("active");
+  // Al elegir intervalo, poner mañana como fecha por defecto si el campo está vacío
+  if (mode === "intervalo") {
+    var cs = document.getElementById("ed-cycle-start");
+    if (cs && !cs.value) {
+      var tom = new Date();
+      tom.setDate(tom.getDate() + 1);
+      var y = tom.getFullYear();
+      var m2 = tom.getMonth() + 1;
+      var d2 = tom.getDate();
+      cs.value = y + "-" + (m2 < 10 ? "0" : "") + m2 + "-" + (d2 < 10 ? "0" : "") + d2;
+    }
+  }
   updateFreqPreview();
 }
 function quickDays(list) {
@@ -2493,7 +2505,10 @@ function updateFreqPreview() {
     }
   } else if (freqMode === "intervalo") {
     var n = parseInt(document.getElementById("ed-interval").value, 10) || 2;
-    el.innerHTML = '<span style="color:var(--green)">Frecuencia:</span> cada ' + n + ' día' + (n > 1 ? "s" : "") + '<br><span style="color:var(--muted)">≈ ' + Math.round(7/n*10)/10 + '× por semana</span>';
+    var cs = document.getElementById("ed-cycle-start");
+    var csVal = cs ? cs.value : "";
+    var csLabel = csVal ? '<span style="color:var(--green)"> · Primer riego: ' + csVal + '</span>' : '<span style="color:var(--red)"> · ⚠ Define la fecha de inicio</span>';
+    el.innerHTML = '<span style="color:var(--green)">Frecuencia:</span> cada ' + n + ' día' + (n > 1 ? "s" : "") + csLabel + '<br><span style="color:var(--muted)">≈ ' + Math.round(7/n*10)/10 + '× por semana</span>';
   } else {
     el.innerHTML = '<span style="color:var(--amber)">Sin programación automática.</span><br><span style="color:var(--muted)">El operador activa manualmente.</span>';
   }
