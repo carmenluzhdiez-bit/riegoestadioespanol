@@ -1402,6 +1402,33 @@ var HISTORY = {};
 //   entries: [ { programId, sectorN, sectorName, programa, start, durReal, zonas, ejecutado, notas } ]
 // }
 var currentDateIdx = DATES.length - 1; // default: último día
+
+function findTodayIndex() {
+  var now = new Date();
+  var dayNames = ["dom","lun","mar","mié","jue","vie","sáb"];
+  var monthNames = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  var dayName   = dayNames[now.getDay()];
+  var dayNum    = now.getDate();
+  var monthName = monthNames[now.getMonth()];
+  var todayStr  = dayName + " " + dayNum + " " + monthName;
+
+  // Buscar coincidencia exacta
+  for (var i = 0; i < DATES.length; i++) {
+    if (DATES[i] === todayStr) return i;
+  }
+
+  // Si hoy no está en el array, agregar automáticamente
+  var todayISO = now.getFullYear() + "-"
+    + (now.getMonth() < 9 ? "0" : "") + (now.getMonth()+1) + "-"
+    + (now.getDate() < 10 ? "0" : "") + now.getDate();
+
+  var insertAt = DATES.length;
+  for (var i = 0; i < DATES.length; i++) {
+    if (dateToISO(DATES[i]) > todayISO) { insertAt = i; break; }
+  }
+  DATES.splice(insertAt, 0, todayStr);
+  return insertAt;
+}
 var freqMode = "dias";
 
 /* ==============================================
@@ -3779,7 +3806,7 @@ function doLogin() {
     for (var i = 0; i < dayBtns.length; i++) {
       dayBtns[i].addEventListener("click", function() { toggleDay(this); });
     }
-    currentDateIdx = DATES.length - 1;
+    currentDateIdx = findTodayIndex();
     buildPMR();
     buildWifi();
     updateConflictBadge();
