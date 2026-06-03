@@ -1682,7 +1682,7 @@ function getProjectedEntries(idx) {
       entries.push({
         programId: p.id, sectorN: p.sectorN, sectorName: p.sectorName,
         programa: p.programa || "", start: p.start,
-        durReal: p.dur, zonas: zonas,
+        dur: p.dur, durReal: p.dur, zonas: zonas,
         ejecutado: true, notas: ""
       });
     }
@@ -1834,18 +1834,17 @@ function buildScheduleForDate(idx) {
   }
 
   for (var i = 0; i < events.length; i++) {
-    var ev = useHistory ? events[i] : null;
-    var p = useHistory ? null : events[i];
-    var sectorN   = useHistory ? ev.sectorN   : p.sectorN;
-    var sectorName= useHistory ? ev.sectorName : p.sectorName;
-    var programa  = useHistory ? ev.programa   : (p.programa || "");
-    var startMin  = useHistory ? ev.start       : p.start;
-    var durMin    = useHistory ? ev.durReal     : p.dur;
-    var zonasConMin = useHistory ? ev.zonas     : (p.zonasConMin || []);
-    var notas     = useHistory ? (ev.notas||"") : (p.notes||"");
-    var ejecutado = useHistory ? ev.ejecutado   : true;
+    var ev = events[i];
+    var sectorN    = ev.sectorN;
+    var sectorName = ev.sectorName;
+    var programa   = ev.programa   || "";
+    var startMin   = ev.start      || 0;
+    var durMin     = ev.durReal    || ev.dur || 0;
+    var zonasConMin= ev.zonas      || [];
+    var notas      = ev.notas      || "";
+    var ejecutado  = ev.ejecutado  !== false;
     var color = ctrlColor(sectorN);
-    if (!ejecutado) color = "#6b7280"; // gris si no se ejecutó
+    if (!ejecutado) color = "#6b7280";
 
     var endMin = startMin + durMin;
     var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
