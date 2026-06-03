@@ -879,7 +879,11 @@
     </div>
   </div>
 
-  <div class="section-title">Programas registrados</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div class="section-title" style="margin:0">Programas registrados</div>
+    <input type="text" id="prog-search" placeholder="Buscar controlador o programa..." oninput="renderPrograms()"
+      style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem;width:220px;outline:none">
+  </div>
   <div class="programs-table">
     <div class="prog-row header">
       <span>Controlador · Programa</span><span>Zonas</span><span>Inicio · Duración</span><span>Frecuencia</span><span>Estado</span><span></span>
@@ -2842,19 +2846,34 @@ function hasConflictCheck(p) {
 function renderPrograms() {
   var list = document.getElementById("prog-list");
   if (!list) return;
-  if (PROGRAMS.length === 0) {
-    list.innerHTML = '<div style="padding:16px;color:var(--muted);font-family:var(--font-mono);font-size:0.8rem">Sin programas registrados.</div>';
+
+  var search = "";
+  var searchEl = document.getElementById("prog-search");
+  if (searchEl) search = searchEl.value.toLowerCase().trim();
+
+  // Filtrar programas por búsqueda
+  var filtered = PROGRAMS;
+  if (search) {
+    filtered = PROGRAMS.filter(function(p) {
+      return p.sectorName.toLowerCase().indexOf(search) >= 0 ||
+             String(p.sectorN).indexOf(search) >= 0 ||
+             (p.programa || "").toLowerCase().indexOf(search) >= 0 ||
+             (p.notes || "").toLowerCase().indexOf(search) >= 0;
+    });
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="padding:16px;color:var(--muted);font-family:var(--font-mono);font-size:0.8rem">' + (search ? 'Sin resultados para "' + search + '"' : "Sin programas registrados.") + '</div>';
     return;
   }
 
   // Group by controller, ordered 1→14
   var byCtrl = {};
-  for (var i = 0; i < PROGRAMS.length; i++) {
-    var p = PROGRAMS[i];
+  for (var i = 0; i < filtered.length; i++) {
+    var p = filtered[i];
     if (!byCtrl[p.sectorN]) byCtrl[p.sectorN] = [];
     byCtrl[p.sectorN].push(p);
   }
-  // Sort controller numbers numerically
   var ctrlOrder = Object.keys(byCtrl).map(function(k) { return parseInt(k, 10); });
   ctrlOrder.sort(function(a, b) { return a - b; });
 
