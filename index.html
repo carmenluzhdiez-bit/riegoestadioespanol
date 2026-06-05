@@ -3049,7 +3049,9 @@ function renderPrograms() {
       if (!byPg[pg]) byPg[pg] = [];
       byPg[pg].push(cprogs[pi]);
     }
-    var pgOrder = Object.keys(byPg).sort();
+    var pgOrder = Object.keys(byPg).sort(function(a, b) {
+      return a.toUpperCase().localeCompare(b.toUpperCase(), 'es', { numeric: true });
+    });
 
     for (var pgi = 0; pgi < pgOrder.length; pgi++) {
       var pgLetter = pgOrder[pgi];
@@ -3194,6 +3196,14 @@ function renderControllers() {
     for (var pi = 0; pi < PROGRAMS.length; pi++) {
       if (PROGRAMS[pi].sectorN === c.n) userPgs.push(PROGRAMS[pi]);
     }
+    // Ordenar alfabéticamente por nombre de programa (A, B, C...), luego por hora
+    userPgs.sort(function(a, b) {
+      var pa = (a.programa || "zzz").toString().toUpperCase();
+      var pb = (b.programa || "zzz").toString().toUpperCase();
+      var cmp = pa.localeCompare(pb, 'es', { numeric: true });
+      if (cmp !== 0) return cmp;
+      return (a.start || 0) - (b.start || 0);
+    });
     var activePgs = userPgs.length;
 
     // PROGRAMAS DEL SISTEMA (activos, editables)
@@ -3225,7 +3235,9 @@ function renderControllers() {
     }
 
     // REFERENCIA EXCEL (colapsable)
-    var progs2 = c.programas || [];
+    var progs2 = (c.programas || []).slice().sort(function(a, b) {
+      return (a.pg || "zzz").toString().toUpperCase().localeCompare((b.pg || "zzz").toString().toUpperCase(), 'es', { numeric: true });
+    });
     var pgHtml = "";
     if (progs2.length > 0) {
       var pgRows = "";
