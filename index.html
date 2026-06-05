@@ -728,9 +728,16 @@
     <div id="pmr-next-result" style="margin-top:8px"></div>
   </div>
 
-  <div class="section-title">Programación del día <span id="day-title" style="color:var(--green);margin-left:8px;font-family:var(--font-mono)"></span>
-    <span id="day-status-badge" style="margin-left:10px;font-size:0.65rem;font-family:var(--font-mono);padding:2px 8px;border-radius:5px;vertical-align:middle"></span>
-    <button onclick="printDayReport()" style="margin-left:8px;padding:4px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer;vertical-align:middle">🖨 Imprimir / PDF</button>
+  <!-- Barra destacada del día seleccionado -->
+  <div style="background:linear-gradient(135deg,var(--green) 0%,#0d6b3d 100%);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--font-mono);font-size:0.62rem;color:#a8d5b5;text-transform:uppercase;letter-spacing:.08em">Programación del día</div>
+        <div id="day-title" style="font-size:1.35rem;font-weight:800;color:#fff;line-height:1.1;margin-top:2px"></div>
+      </div>
+      <span id="day-status-badge" style="font-size:0.7rem;font-family:var(--font-mono);padding:4px 12px;border-radius:20px;font-weight:700"></span>
+    </div>
+    <button onclick="printDayReport()" style="padding:7px 16px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">🖨 Imprimir / PDF</button>
   </div>
   <!-- Panel de confirmación (solo admin) -->
   <div id="history-panel" class="only-admin" style="display:none;margin-bottom:16px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px">
@@ -3083,7 +3090,18 @@ function renderPrograms() {
         if (isEditing) html += ' <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--green);margin-left:6px">← editando</span>';
         if (p.notes) html += '<br><span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted)">' + p.notes + '</span>';
         html += zonasHtml + '</div>';
-        html += '<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--blue)">' + buildDaysLabel(p) + '</div>';
+        // Frecuencia + próximo riego
+        var next = findNextIrrigation(p);
+        var nextHtml = "";
+        if (next) {
+          if (next.isToday) nextHtml = '<span style="color:var(--green);font-weight:700">→ Hoy</span>';
+          else if (next.daysAway === 1) nextHtml = '<span style="color:var(--amber);font-weight:700">→ Mañana</span>';
+          else nextHtml = '<span style="color:var(--text)">→ en ' + next.daysAway + ' días</span>';
+          nextHtml = '<br><span style="font-size:0.6rem">' + nextHtml + ' <span style="color:var(--muted)">' + next.str + '</span></span>';
+        } else {
+          nextHtml = '<br><span style="font-size:0.6rem;color:var(--muted)">→ manual</span>';
+        }
+        html += '<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--blue)">' + buildDaysLabel(p) + nextHtml + '</div>';
         html += '<div>' + statusHtml + '</div>';
         html += '<div style="display:flex;gap:6px;align-items:center">';
         html += '<button class="edit-btn" onclick="editProgram(' + p.id + ')" title="Editar" style="' + (isEditing ? 'background:var(--green);color:#000;' : '') + '">✎</button>';
