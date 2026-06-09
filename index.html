@@ -746,7 +746,10 @@
       </div>
       <span id="day-status-badge" style="font-size:0.7rem;font-family:var(--font-mono);padding:4px 12px;border-radius:20px;font-weight:700"></span>
     </div>
-    <button onclick="printDayReport()" style="padding:7px 16px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">🖨 Imprimir / PDF</button>
+    <div style="display:flex;gap:6px">
+      <button onclick="printDayReport()" style="padding:7px 14px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">🖨 Este día</button>
+      <button onclick="openPrintRangeModal()" style="padding:7px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;white-space:nowrap">📅 Varios días</button>
+    </div>
   </div>
   <!-- Panel de confirmación (solo admin) -->
   <div id="history-panel" class="only-admin" style="display:none;margin-bottom:16px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px">
@@ -3913,6 +3916,190 @@ function showSyncBadge(msg) {
   syncTimer = setTimeout(function() { bc.style.display = "none"; }, 3000);
 }
 
+
+/* ==============================================
+   IMPRIMIR RANGO DE DÍAS
+============================================== */
+var prSelectedDays = new Set();
+
+function openPrintRangeModal() {
+  prSelectedDays = new Set();
+  // Pre-seleccionar el día actual
+  prSelectedDays.add(currentDateIdx);
+  buildPrintRangeDays();
+  var modal = document.getElementById("print-range-modal");
+  modal.style.display = "flex";
+}
+
+function closePrintRangeModal() {
+  document.getElementById("print-range-modal").style.display = "none";
+}
+
+function buildPrintRangeDays() {
+  var todayIdx = findTodayIndex();
+  var winStart = Math.max(0, todayIdx - 10);
+  var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
+  var html = "";
+  for (var i = winStart; i <= winEnd; i++) {
+    var sel = prSelectedDays.has(i);
+    var st = getDayStatus(DATES[i]);
+    var dot = st === "ejecutado" ? "✅ " : st === "cambios" ? "⚠️ " : st === "no-regado" ? "❌ " : st === "lluvia" ? "🌧 " : "";
+    var isToday = (i === findTodayIndex());
+    var todayMark = isToday ? ' style="outline:2px solid var(--green);outline-offset:2px;' : ' style="';
+    html += '<button onclick="prToggleDay(' + i + ')" ' + todayMark +
+      'padding:5px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.68rem;cursor:pointer;border:1px solid ' +
+      (sel ? 'var(--green);background:var(--green);color:#000;font-weight:700' : 'var(--border);background:var(--panel);color:var(--text)') +
+      '">' + dot + DATES[i] + '</button>';
+  }
+  document.getElementById("print-range-days").innerHTML = html;
+}
+
+function prToggleDay(idx) {
+  if (prSelectedDays.has(idx)) prSelectedDays.delete(idx);
+  else prSelectedDays.add(idx);
+  buildPrintRangeDays();
+}
+
+function prSelectRange(mode) {
+  var todayIdx = findTodayIndex();
+  prSelectedDays = new Set();
+  if (mode === "today") {
+    prSelectedDays.add(todayIdx);
+  } else if (mode === "tomorrow") {
+    if (todayIdx + 1 < DATES.length) prSelectedDays.add(todayIdx + 1);
+  } else if (mode === "week") {
+    // Lunes a domingo de la semana actual
+    var todayISO = dateToISO(DATES[todayIdx]);
+    var d = new Date(todayISO + "T12:00:00");
+    var dow = d.getDay(); // 0=dom
+    var diffToMon = dow === 0 ? -6 : 1 - dow;
+    var monDate = new Date(d); monDate.setDate(d.getDate() + diffToMon);
+    var sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
+    for (var i = 0; i < DATES.length; i++) {
+      var iso = dateToISO(DATES[i]);
+      if (iso >= monDate.toISOString().slice(0,10) && iso <= sunDate.toISOString().slice(0,10))
+        prSelectedDays.add(i);
+    }
+  } else if (mode === "next7") {
+    var todayISO = dateToISO(DATES[todayIdx]);
+    for (var i = 0; i < DATES.length; i++) {
+      var iso = dateToISO(DATES[i]);
+      if (iso >= todayISO) {
+        prSelectedDays.add(i);
+        if (prSelectedDays.size >= 7) break;
+      }
+    }
+  } else if (mode === "none") {
+    prSelectedDays = new Set();
+  }
+  buildPrintRangeDays();
+}
+
+/* ==============================================
+   HELPER: eventos reales para un índice de fecha
+   (usado por impresión para respetar historial)
+============================================== */
+function getEventsForDate(idx) {
+  var dateStr = DATES[idx];
+  var h = HISTORY[dateStr];
+  var useHist = h && h.status !== "sin-confirmar" && h.entries;
+  var events = [];
+  if (useHist) {
+    // IDs actualmente válidos para este día
+    var currentProgs = getProjectedEntries(idx);
+    var currentIds = {};
+    for (var ci = 0; ci < currentProgs.length; ci++) currentIds[currentProgs[ci].programId] = true;
+    // Copiar entries del historial, marcando obsoletos
+    for (var i = 0; i < h.entries.length; i++) {
+      var e = Object.assign({}, h.entries[i]);
+      e._obsoleto = !currentIds[e.programId];
+      events.push(e);
+    }
+    // Agregar programas nuevos no presentes en historial
+    var histIds = {};
+    for (var i = 0; i < h.entries.length; i++) histIds[h.entries[i].programId] = true;
+    var newP = currentProgs.filter(function(e){ return !histIds[e.programId]; });
+    for (var i = 0; i < newP.length; i++) { newP[i].isNew = true; events.push(newP[i]); }
+    // Filtrar obsoletos
+    events = events.filter(function(e){ return !e._obsoleto; });
+  } else {
+    for (var i = 0; i < PROGRAMS.length; i++) {
+      if (programRunsOnDate(PROGRAMS[i], idx)) events.push(PROGRAMS[i]);
+    }
+  }
+  events.sort(function(a,b){ return (a.start||0) - (b.start||0); });
+  return { events: events, useHist: !!useHist };
+}
+
+function printRangeReport() {
+  if (prSelectedDays.size === 0) { alert("Selecciona al menos un día."); return; }
+  var sortedIdxs = Array.from(prSelectedDays).sort(function(a,b){ return a - b; });
+  var html = "";
+
+  for (var di = 0; di < sortedIdxs.length; di++) {
+    var idx = sortedIdxs[di];
+    var dateStr = DATES[idx];
+    var evData = getEventsForDate(idx);
+    var events = evData.events;
+    var useHist = evData.useHist;
+
+    var st = getDayStatus(dateStr);
+    var stLabels = { "ejecutado":"✅ Ejecutado", "cambios":"⚠️ Con cambios", "no-regado":"❌ No regado", "lluvia":"🌧 Suspendido por lluvia", "sin-confirmar":"📋 Sin confirmar" };
+    var stColors = { "ejecutado":"#14532d", "cambios":"#78350f", "no-regado":"#7f1d1d", "lluvia":"#1e3a5f", "sin-confirmar":"#374151" };
+    var stBadge = '<span style="display:inline-block;background:' + (stColors[st]||"#374151") + ';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;margin-left:8px">' + (stLabels[st]||st) + '</span>';
+
+    if (di > 0) html += '<div style="border-top:3px solid #0a4f2e;margin:20px 0"></div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">';
+    html += '<div><h2 style="border:none;padding:0;margin:0;font-size:15px;color:#0a4f2e">' + dateStr + stBadge + '</h2></div>';
+    html += '<div style="font-size:9px;color:#666">' + events.length + ' programa' + (events.length!==1?'s':'') + '</div>';
+    html += '</div>';
+
+    if (events.length === 0) {
+      html += '<p style="color:#999;font-size:10px;margin:8px 0 0">Sin riego programado.</p>';
+    } else {
+      html += '<table><thead><tr><th>Hora</th><th>Controlador · Prog.</th><th>Min.</th><th>Zonas</th><th>Estado</th></tr></thead><tbody>';
+      for (var i = 0; i < events.length; i++) {
+        var ev = events[i];
+        // Determine start/dur depending on source (program or history entry)
+        var startMin = ev.start || 0;
+        var durMin   = ev.durReal || ev.dur || 0;
+        var pgLabel  = ev.programa ? '<span class="prog-label pg-' + (ev.programa.charAt(0)||'a').toLowerCase() + '">' + ev.programa + '</span>' : '';
+        var zonaChips = '';
+        var zonas = ev.zonasConMin || ev.zonas || [];
+        for (var zi = 0; zi < zonas.length; zi++) {
+          var zz = zonas[zi];
+          var zEj = zz.ejecutado;
+          var zIcon = zEj === false ? "❌" : zEj === "anomalo" ? "⚠️" : zEj === "lluvia" ? "🌧" : "";
+          zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + (zz.minReal || zz.min || 0) + 'min</span></span>';
+        }
+        var evEj = ev.ejecutado;
+        var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
+          : evEj === "anomalo" ? '<span style="color:#d97706;font-size:9px">⚠️ Anómalo</span>'
+          : evEj === "lluvia"  ? '<span style="color:#3b82f6;font-size:9px">🌧 Suspendido</span>'
+          : useHist ? '<span style="color:#16a34a;font-size:9px">✅ OK</span>' : '<span style="color:#6b7280;font-size:9px">Proyección</span>';
+        html += '<tr>';
+        html += '<td><span class="time">' + minToHHMM(startMin) + '</span></td>';
+        html += '<td>' + pgLabel + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev.notas ? '<br><span style="color:#666;font-size:9px">' + ev.notas + '</span>' : '') + '</td>';
+        html += '<td><span class="dur">' + durMin + '</span></td>';
+        html += '<td>' + zonaChips + '</td>';
+        html += '<td>' + evStatus + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+  }
+
+  var rangeLabel = sortedIdxs.length === 1 ? DATES[sortedIdxs[0]]
+    : DATES[sortedIdxs[0]] + ' – ' + DATES[sortedIdxs[sortedIdxs.length-1]];
+  var fullHtml = '<div class="header"><div class="header-left"><h1>Informe de Riego</h1>';
+  fullHtml += '<p>Estadio Español · Departamento de Áreas Verdes</p></div>';
+  fullHtml += '<div class="header-right"><span class="badge">' + rangeLabel + '</span></div></div>';
+  fullHtml += html;
+
+  closePrintRangeModal();
+  buildPrintWindow("Riego " + rangeLabel, fullHtml);
+}
+
 /* ==============================================
    IMPRESION / PDF
 ============================================== */
@@ -3957,6 +4144,7 @@ function buildPrintWindow(title, bodyHtml) {
   w.document.write(bodyHtml);
   w.document.write('<div class="footer">PMR EE · Áreas Verdes · Estadio Español · Impreso el ' + new Date().toLocaleString('es-CL') + '</div>');
   w.document.write('<br><div style="text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#0a4f2e;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:8px">🖨 Imprimir</button><button onclick="window.print()" style="padding:8px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">💾 Guardar como PDF</button></div>');
+  w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
   w.document.write('</body></html>');
   w.document.close();
 }
@@ -3966,17 +4154,19 @@ function ctrlColorPrint(n) { return COLORS_PRINT[(n-1) % COLORS_PRINT.length]; }
 
 function printDayReport() {
   var dateStr = DATES[currentDateIdx];
-  var events = [];
-  for (var i = 0; i < PROGRAMS.length; i++) {
-    var p = PROGRAMS[i];
-    if (programRunsOnDate(p, currentDateIdx)) events.push(p);
-  }
-  events.sort(function(a,b){ return a.start - b.start; });
+  var evData = getEventsForDate(currentDateIdx);
+  var events = evData.events;
+  var useHist = evData.useHist;
+
+  var st = getDayStatus(dateStr);
+  var stLabels = { "ejecutado":"✅ Ejecutado", "cambios":"⚠️ Con cambios", "no-regado":"❌ No regado", "lluvia":"🌧 Suspendido por lluvia", "sin-confirmar":"📋 Sin confirmar" };
+  var stColors = { "ejecutado":"#14532d", "cambios":"#78350f", "no-regado":"#7f1d1d", "lluvia":"#1e3a5f", "sin-confirmar":"#374151" };
+  var stBadge = stColors[st] ? ' <span style="background:' + stColors[st] + ';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px">' + (stLabels[st]||st) + '</span>' : '';
 
   var html = '<div class="header">';
   html += '<div class="header-left"><h1>Informe de Riego Diario</h1>';
   html += '<p>Estadio Español · Departamento de Áreas Verdes</p></div>';
-  html += '<div class="header-right"><span class="badge">' + dateStr + '</span><br>' + events.length + ' programa' + (events.length!==1?'s':'') + ' activos</div>';
+  html += '<div class="header-right"><span class="badge">' + dateStr + '</span>' + stBadge + '<br><span style="font-size:9px">' + events.length + ' programa' + (events.length!==1?'s':'') + '</span></div>';
   html += '</div>';
 
   if (events.length === 0) {
@@ -3985,27 +4175,43 @@ function printDayReport() {
     html += '<table><thead><tr><th>Hora inicio</th><th>Controlador · Programa</th><th>Duración</th><th>Frecuencia</th><th>Zonas</th><th>Línea de tiempo</th></tr></thead><tbody>';
     for (var i = 0; i < events.length; i++) {
       var p = events[i];
-      var color = ctrlColorPrint(p.sectorN);
-      var endMin = p.start + p.dur;
-      var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
-      var pgLabel = p.programa ? '<span class="prog-label pg-' + p.programa.charAt(0).toLowerCase() + '">' + p.programa + '</span>' : '';
+      var startMin = p.start || 0;
+      var durMin   = p.durReal || p.dur || 0;
+      var evEj     = p.ejecutado;
+      var color    = ctrlColorPrint(p.sectorN);
+      // Tint color for suspended/not-executed rows
+      var rowBg    = evEj === false ? 'background:#fff0f0' : evEj === 'lluvia' ? 'background:#eff6ff' : evEj === 'anomalo' ? 'background:#fffbeb' : '';
+      var endMin   = startMin + durMin;
+      var endStr   = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
+      var pgLabel  = p.programa ? '<span class="prog-label pg-' + (p.programa.charAt(0)||'a').toLowerCase() + '">' + p.programa + '</span>' : '';
+      // Status badge per entry
+      var entryStatus = '';
+      if (useHist) {
+        entryStatus = evEj === false        ? ' <span style="color:#dc2626;font-size:9px;font-weight:700">❌ No ejecutado</span>'
+                    : evEj === 'anomalo'    ? ' <span style="color:#d97706;font-size:9px;font-weight:700">⚠️ Anómalo</span>'
+                    : evEj === 'lluvia'     ? ' <span style="color:#2563eb;font-size:9px;font-weight:700">🌧 Suspendido</span>'
+                    : '<span style="color:#16a34a;font-size:9px">✅</span>';
+      }
       var zonaChips = '';
-      if (p.zonasConMin && p.zonasConMin.length > 0) {
-        for (var zi = 0; zi < p.zonasConMin.length; zi++) {
-          var zz = p.zonasConMin[zi];
-          zonaChips += '<span class="zona-chip"><span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zz.min+'min</span></span>';
-        }
+      var zonas = p.zonasConMin || p.zonas || [];
+      for (var zi = 0; zi < zonas.length; zi++) {
+        var zz = zonas[zi];
+        var zEj  = zz.ejecutado;
+        var zIcon = zEj === false ? '❌' : zEj === 'anomalo' ? '⚠️' : zEj === 'lluvia' ? '🌧' : '';
+        var zMin  = zz.minReal !== undefined ? zz.minReal : (zz.min || 0);
+        zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + ' ' : '') + '<span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zMin+'min</span></span>';
       }
       // Bar
-      var leftPct = (p.start/1440*100).toFixed(1);
-      var widthPct = Math.max(p.dur/1440*100, 0.5).toFixed(1);
-      var barHtml = '<div class="bar-wrap"><div class="bar-seg" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+color+'"></div></div>';
-      barHtml += '<span style="font-size:9px;color:#666;font-family:monospace">'+minToHHMM(p.start)+'–'+endStr+'</span>';
-      html += '<tr>';
-      html += '<td><span class="time">'+minToHHMM(p.start)+'</span></td>';
-      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+(p.notes?'<br><span style="color:#666;font-size:9px">'+p.notes+'</span>':'')+'</td>';
-      html += '<td><span class="dur">'+p.dur+' min</span></td>';
-      html += '<td style="font-family:monospace;font-size:9px">'+buildDaysLabel(p)+'</td>';
+      var leftPct  = (startMin/1440*100).toFixed(1);
+      var widthPct = Math.max(durMin/1440*100, 0.5).toFixed(1);
+      var barColor = evEj === false ? '#dc2626' : evEj === 'lluvia' ? '#3b82f6' : evEj === 'anomalo' ? '#d97706' : color;
+      var barHtml  = '<div class="bar-wrap"><div class="bar-seg" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+barColor+'"></div></div>';
+      barHtml += '<span style="font-size:9px;color:#666;font-family:monospace">'+minToHHMM(startMin)+'–'+endStr+'</span>';
+      html += '<tr style="'+rowBg+'">';
+      html += '<td><span class="time">'+minToHHMM(startMin)+'</span></td>';
+      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+entryStatus+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
+      html += '<td><span class="dur">'+durMin+' min</span></td>';
+      html += '<td style="font-family:monospace;font-size:9px">'+(p.days ? buildDaysLabel(p) : '—')+'</td>';
       html += '<td>'+zonaChips+'</td>';
       html += '<td>'+barHtml+'</td>';
       html += '</tr>';
@@ -4018,7 +4224,7 @@ function printDayReport() {
     for (var i = 0; i < events.length; i++) {
       var p = events[i];
       if (!byCtrl[p.sectorN]) byCtrl[p.sectorN] = { name: p.sectorName, totalMin: 0, progs: [] };
-      byCtrl[p.sectorN].totalMin += p.dur;
+      byCtrl[p.sectorN].totalMin += (p.durReal || p.dur || 0);
       byCtrl[p.sectorN].progs.push(p);
     }
     html += '<table><thead><tr><th>N°</th><th>Controlador</th><th>Programas</th><th>Min. total</th></tr></thead><tbody>';
@@ -4192,5 +4398,29 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 </script>
+
+<!-- ====== MODAL: Imprimir rango de días ====== -->
+<div id="print-range-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(480px,95vw);max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:var(--green)">📅 Imprimir varios días</div>
+      <button onclick="closePrintRangeModal()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:2px 6px">✕</button>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);margin-bottom:12px">Selecciona los días a incluir en el informe</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button onclick="prSelectRange('today')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Hoy</button>
+      <button onclick="prSelectRange('tomorrow')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Mañana</button>
+      <button onclick="prSelectRange('week')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Esta semana</button>
+      <button onclick="prSelectRange('next7')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Próx. 7 días</button>
+      <button onclick="prSelectRange('none')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);cursor:pointer">Limpiar</button>
+    </div>
+    <div id="print-range-days" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;max-height:220px;overflow-y:auto;padding:4px 0"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">
+      <button onclick="closePrintRangeModal()" style="padding:7px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);cursor:pointer">Cancelar</button>
+      <button onclick="printRangeReport()" style="padding:7px 16px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">🖨 Imprimir selección</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
