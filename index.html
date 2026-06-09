@@ -716,6 +716,7 @@
     <div style="display:flex;gap:8px;align-items:center">
       <input type="date" id="new-day-input" style="padding:5px 10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.75rem;outline:none">
       <button onclick="addPMRDay()" style="padding:5px 12px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">+ Agregar día</button>
+      <button onclick="addPMRWeek()" style="padding:5px 12px;background:var(--panel);color:var(--green);border:1px solid var(--green);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer" title="Agrega los 7 días de la semana que contiene la fecha seleccionada">+ Semana completa</button>
     </div>
   </div>
   <div class="date-nav" id="date-nav"></div>
@@ -1743,17 +1744,25 @@ function buildHistoryEditTable(entries, dateStr) {
       html += '<table style="width:100%;border-collapse:collapse">';
       html += '<thead><tr><th style="text-align:left;padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted)">Zona</th>';
       html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-align:center">Min. real</th>';
-      html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-align:center">Regó</th>';
+      html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-align:center">Estado riego</th>';
       html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted)">Nota zona</th></tr></thead><tbody>';
       for (var zi = 0; zi < e.zonas.length; zi++) {
         var z = e.zonas[zi];
         var zExec = z.ejecutado !== false;
-        var zBg = zExec ? "" : "background:#7f1d1d18;";
+        var zAnomalo = z.ejecutado === "anomalo";
+        var zBg = zAnomalo ? "background:#78350f18;" : (!zExec ? "background:#7f1d1d18;" : "");
         html += '<tr style="border-top:1px solid var(--border);' + zBg + '">';
         html += '<td style="padding:4px 6px;font-family:var(--font-mono);font-size:0.68rem"><span style="color:var(--blue)">Z' + z.id + '</span> ' + (z.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '</td>';
         html += '<td style="padding:4px 6px;text-align:center"><input type="number" value="' + (z.minReal !== undefined ? z.minReal : z.min) + '" min="0" max="480" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'minReal\',this.value)" style="width:46px;text-align:center;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>';
-        html += '<td style="padding:4px 6px;text-align:center"><input type="checkbox"' + (zExec ? " checked" : "") + ' onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'ejecutado\',this.checked)" style="accent-color:var(--green);width:15px;height:15px;cursor:pointer"></td>';
-        html += '<td style="padding:4px 6px"><input type="text" value="' + (z.nota||"") + '" placeholder="ej. falla válvula" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'nota\',this.value)" style="width:100%;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>';
+        // 3-state selector
+        var selVal = z.ejecutado === false ? "false" : (z.ejecutado === "anomalo" ? "anomalo" : "true");
+        html += '<td style="padding:4px 6px;text-align:center">';
+        html += '<select onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'ejecutado\',this.value)" style="padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">';
+        html += '<option value="true"'  + (selVal==="true"    ? " selected" : "") + '>✅ OK</option>';
+        html += '<option value="anomalo"' + (selVal==="anomalo" ? " selected" : "") + '>⚠️ Anómalo</option>';
+        html += '<option value="false"' + (selVal==="false"   ? " selected" : "") + '>❌ No regó</option>';
+        html += '</select></td>';
+        html += '<td style="padding:4px 6px"><input type="text" value="' + (z.nota||"") + '" placeholder="' + (selVal==="anomalo" ? "ej. boquilla rota, pop-up doblado..." : "ej. falla válvula") + '" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'nota\',this.value)" style="width:100%;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>';
         html += '</tr>';
       }
       html += '</tbody></table></div>';
@@ -1787,19 +1796,26 @@ function updateZonaEntry(dateStr, entryIdx, zonaIdx, field, value) {
   var z = HISTORY[dateStr].entries[entryIdx].zonas[zonaIdx];
   if (!z) return;
   if (field === "minReal")   { z.minReal = parseInt(value, 10) || 0; }
-  if (field === "ejecutado") { z.ejecutado = value; }
+  if (field === "ejecutado") {
+    // value comes as string from select: "true" | "anomalo" | "false"
+    if (value === "true" || value === true)   z.ejecutado = true;
+    else if (value === "anomalo")             z.ejecutado = "anomalo";
+    else                                      z.ejecutado = false;
+  }
   if (field === "nota")      { z.nota = value; }
   // Recalcular durReal del programa desde zonas
   var totalReal = 0;
   var allZonas = HISTORY[dateStr].entries[entryIdx].zonas;
   for (var zi = 0; zi < allZonas.length; zi++) {
+    // anomalo counts time (water did flow), only false skips
     if (allZonas[zi].ejecutado !== false) totalReal += (allZonas[zi].minReal !== undefined ? allZonas[zi].minReal : allZonas[zi].min) || 0;
   }
   HISTORY[dateStr].entries[entryIdx].durReal = totalReal;
   // Recalcular ejecutado del programa
-  var allExec = allZonas.every(function(z){ return z.ejecutado !== false; });
+  var allExec = allZonas.every(function(z){ return z.ejecutado === true; });
   var anyExec = allZonas.some(function(z){ return z.ejecutado !== false; });
-  HISTORY[dateStr].entries[entryIdx].ejecutado = anyExec;
+  var anyAnomalo = allZonas.some(function(z){ return z.ejecutado === "anomalo"; });
+  HISTORY[dateStr].entries[entryIdx].ejecutado = anyExec ? (anyAnomalo ? "anomalo" : true) : false;
 }
 
 function setAllZonasEjecutado(dateStr, entryIdx, exec) {
@@ -1904,12 +1920,18 @@ function updateHistoryEntry(dateStr, idx, field, value) {
 function saveHistoryEdits(dateStr) {
   if (HISTORY[dateStr]) {
     HISTORY[dateStr].editMode = false;
-    // Update status based on entries
-    var allExec = HISTORY[dateStr].entries.every(function(e){ return e.ejecutado; });
-    var noneExec = HISTORY[dateStr].entries.every(function(e){ return !e.ejecutado; });
-    if (noneExec) HISTORY[dateStr].status = "no-regado";
-    else if (allExec) HISTORY[dateStr].status = "ejecutado";
-    else HISTORY[dateStr].status = "cambios";
+    // Update status based on entries — anomalo counts as partial execution
+    var allEntries = HISTORY[dateStr].entries;
+    var allExec   = allEntries.every(function(e){ return e.ejecutado === true; });
+    var noneExec  = allEntries.every(function(e){ return !e.ejecutado; });
+    var anyAnomalo = allEntries.some(function(e){
+      if (e.ejecutado === "anomalo") return true;
+      if (e.zonas && e.zonas.some(function(z){ return z.ejecutado === "anomalo"; })) return true;
+      return false;
+    });
+    if (noneExec)            HISTORY[dateStr].status = "no-regado";
+    else if (allExec && !anyAnomalo) HISTORY[dateStr].status = "ejecutado";
+    else                     HISTORY[dateStr].status = "cambios";
     HISTORY[dateStr].confirmedAt = new Date().toISOString();
   }
   saveToStorage();
@@ -2010,8 +2032,10 @@ function buildScheduleForDate(idx) {
     var zonasConMin= ev.zonas      || [];
     var notas      = ev.notas      || "";
     var ejecutado  = ev.ejecutado  !== false;
+    var esAnomalo  = ev.ejecutado  === "anomalo";
     var color = ctrlColor(sectorN);
     if (!ejecutado) color = "#6b7280";
+    if (esAnomalo)  color = "#d97706";
 
     var endMin = startMin + durMin;
     var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
@@ -2025,11 +2049,12 @@ function buildScheduleForDate(idx) {
 
     var rowStyle = "";
     if (useHistory && !ejecutado) rowStyle = "opacity:0.5;";
+    if (useHistory && esAnomalo)  rowStyle = "opacity:0.85;";
 
     html += '<div class="schedule-row" style="' + rowStyle + '">';
     html += '<div class="sr-top">';
     html += '<span class="time-tag">' + minToHHMM(startMin) + '</span>';
-    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + '</span>';
+    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '') + '</span>';
     html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
     html += '</div>';
 
@@ -2098,6 +2123,81 @@ function addPMRDay() {
   // (new days have no historical data, they show programs only)
 
   currentDateIdx = insertAt;
+  input.value = "";
+  buildPMR();
+  saveToStorage();
+}
+
+function addPMRWeek() {
+  var input = document.getElementById("new-day-input");
+  if (!input || !input.value) {
+    alert("Selecciona primero una fecha de referencia para agregar la semana completa.");
+    return;
+  }
+  var iso = input.value; // "2026-06-15"
+  // Find Monday of that week (ISO week: Mon=1 ... Sun=0)
+  var ref = new Date(iso + "T12:00:00");
+  var dow = ref.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  var diffToMon = (dow === 0) ? -6 : 1 - dow;
+  var monday = new Date(ref);
+  monday.setDate(ref.getDate() + diffToMon);
+
+  var monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
+  var added = 0;
+  var lastIdx = -1;
+
+  for (var d = 0; d < 7; d++) {
+    var cur = new Date(monday);
+    cur.setDate(monday.getDate() + d);
+    var y  = cur.getFullYear();
+    var m  = cur.getMonth() + 1;
+    var dd = cur.getDate();
+    var dayLabel  = dayNames[cur.getDay()];
+    var monLabel  = monthNames[m];
+    var label = dayLabel + " " + dd + " " + monLabel;
+    var curISO = y + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
+
+    // Skip if already exists
+    var exists = false;
+    for (var i = 0; i < DATES.length; i++) {
+      if (DATES[i] === label) { exists = true; lastIdx = i; break; }
+    }
+    if (exists) continue;
+
+    // Insert in chronological order
+    var insertAt = DATES.length;
+    for (var i = 0; i < DATES.length; i++) {
+      var existISO = dateToISO(DATES[i]);
+      if (existISO > curISO) { insertAt = i; break; }
+    }
+    DATES.splice(insertAt, 0, label);
+    added++;
+    lastIdx = insertAt;
+    // Adjust lastIdx for subsequent inserts that shifted positions
+    // (re-search is handled by label matching above)
+  }
+
+  if (added === 0) {
+    // All days already present — just navigate to Monday
+    for (var i = 0; i < DATES.length; i++) {
+      var dayLabel = dayNames[monday.getDay()];
+      var monLabel = monthNames[monday.getMonth() + 1];
+      var monDayLabel = dayLabel + " " + monday.getDate() + " " + monLabel;
+      if (DATES[i] === monDayLabel) { lastIdx = i; break; }
+    }
+  }
+
+  // Navigate to Monday of the added week
+  var targetLabel = (function(){
+    var dayLabel = dayNames[monday.getDay()];
+    var monLabel = monthNames[monday.getMonth() + 1];
+    return dayLabel + " " + monday.getDate() + " " + monLabel;
+  })();
+  for (var i = 0; i < DATES.length; i++) {
+    if (DATES[i] === targetLabel) { currentDateIdx = i; break; }
+  }
+
   input.value = "";
   buildPMR();
   saveToStorage();
