@@ -72,17 +72,23 @@
     gap: 4px;
     padding: 16px 40px 0;
     border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    padding: 8px 20px;
+    padding: 8px 14px;
     border-radius: 8px 8px 0 0;
-    font-size: 0.82rem; font-weight: 600;
+    font-size: 0.78rem; font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
     border-bottom: none;
     color: var(--muted);
     transition: all .2s;
     background: none;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .tab:hover { color: var(--text); background: var(--panel); }
   .tab.active {
@@ -707,11 +713,11 @@
 
 <div class="tabs">
   <button class="tab active" data-tab="pmr" onclick="showTab('pmr')">📅 PMR EE</button>
-  <button class="tab" data-tab="wifi" onclick="showTab('wifi')">📡 Sectores WiFi</button>
-  <button class="tab" data-tab="conflictos" id="tab-conflictos" onclick="showTab('conflictos')">⚠️ Conflictos de Bomba</button>
-  <button class="tab only-editor" data-tab="editor" onclick="showTab('editor')">✏️ Programar Riego</button>
-  <button class="tab" data-tab="controladores" onclick="showTab('controladores')">🗂️ Controladores y Zonas</button>
-  <button class="tab only-admin" data-tab="config" onclick="showTab('config')">⚙️ Configuración</button>
+  <button class="tab" data-tab="wifi" onclick="showTab('wifi')">📡 WiFi</button>
+  <button class="tab" data-tab="conflictos" id="tab-conflictos" onclick="showTab('conflictos')">⚠️ Conflictos</button>
+  <button class="tab only-editor" data-tab="editor" onclick="showTab('editor')">✏️ Programar</button>
+  <button class="tab" data-tab="controladores" onclick="showTab('controladores')">🗂️ Controladores</button>
+  <button class="tab only-admin" data-tab="config" onclick="showTab('config')">⚙️ Config.</button>
 </div>
 
 <main>
@@ -926,7 +932,8 @@
     <div class="section-title" style="margin:0">Buscar / filtrar</div>
     <div style="display:flex;gap:8px">
       <button onclick="buildControllers()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🔄 Actualizar</button>
-      <button onclick="printControllersReport()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🖨 Imprimir / PDF</button>
+      <button onclick="printControllersReport()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🖨 Vista actual</button>
+      <button onclick="openCtrlPrintModal()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">☑ Seleccionar</button>
     </div>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
@@ -3917,6 +3924,26 @@ function showSyncBadge(msg) {
 }
 
 
+/* normaliza zonas desde PROGRAMS (zonasConMin) o HISTORY (entry.zonas) y ordena por id numérico */
+function getNormalizedZonas(ev) {
+  var raw = ev.zonas || ev.zonasConMin || [];
+  var result = [];
+  for (var zi = 0; zi < raw.length; zi++) {
+    var z = raw[zi];
+    result.push({
+      id:       z.id   !== undefined ? z.id   : (z.z !== undefined ? String(z.z) : String(zi+1)),
+      label:    z.label || z.desc || ("Z" + (z.id || z.z || (zi+1))),
+      min:      z.min   !== undefined ? z.min   : 0,
+      minReal:  z.minReal !== undefined ? z.minReal : (z.min || 0),
+      ejecutado: z.ejecutado !== undefined ? z.ejecutado : true,
+      nota:     z.nota  || ""
+    });
+  }
+  // Ordenar por id numérico
+  result.sort(function(a,b){ return parseInt(a.id,10) - parseInt(b.id,10); });
+  return result;
+}
+
 /* ==============================================
    IMPRIMIR RANGO DE DÍAS
 ============================================== */
@@ -4065,12 +4092,13 @@ function printRangeReport() {
         var durMin   = ev.durReal || ev.dur || 0;
         var pgLabel  = ev.programa ? '<span class="prog-label pg-' + (ev.programa.charAt(0)||'a').toLowerCase() + '">' + ev.programa + '</span>' : '';
         var zonaChips = '';
-        var zonas = ev.zonasConMin || ev.zonas || [];
+        var zonas = getNormalizedZonas(ev);
         for (var zi = 0; zi < zonas.length; zi++) {
           var zz = zonas[zi];
           var zEj = zz.ejecutado;
           var zIcon = zEj === false ? "❌" : zEj === "anomalo" ? "⚠️" : zEj === "lluvia" ? "🌧" : "";
-          zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + (zz.minReal || zz.min || 0) + 'min</span></span>';
+          var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,22);
+          zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + zz.minReal + 'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">' + zLabel + '</span>' : '') + '</span>';
         }
         var evEj = ev.ejecutado;
         var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
@@ -4193,13 +4221,13 @@ function printDayReport() {
                     : '<span style="color:#16a34a;font-size:9px">✅</span>';
       }
       var zonaChips = '';
-      var zonas = p.zonasConMin || p.zonas || [];
+      var zonas = getNormalizedZonas(p);
       for (var zi = 0; zi < zonas.length; zi++) {
         var zz = zonas[zi];
         var zEj  = zz.ejecutado;
         var zIcon = zEj === false ? '❌' : zEj === 'anomalo' ? '⚠️' : zEj === 'lluvia' ? '🌧' : '';
-        var zMin  = zz.minReal !== undefined ? zz.minReal : (zz.min || 0);
-        zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + ' ' : '') + '<span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zMin+'min</span></span>';
+        var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,22);
+        zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + ' ' : '') + '<span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zz.minReal+'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">'+zLabel+'</span>' : '') + '</span>';
       }
       // Bar
       var leftPct  = (startMin/1440*100).toFixed(1);
@@ -4242,9 +4270,14 @@ function printDayReport() {
   buildPrintWindow('Riego ' + dateStr, html);
 }
 
-function printControllersReport() {
-  var search = document.getElementById("ctrl-search") ? document.getElementById("ctrl-search").value.toLowerCase() : "";
-  var filtered = [];
+/* ==============================================
+   IMPRIMIR SELECCIÓN DE CONTROLADORES
+============================================== */
+var ctrlPrintSelected = new Set();
+
+function getVisibleControllers() {
+  var search = (document.getElementById("ctrl-search") ? document.getElementById("ctrl-search").value : "").toLowerCase();
+  var result = [];
   for (var ci = 0; ci < CONTROLLERS.length; ci++) {
     var c = CONTROLLERS[ci];
     if (ctrlCanalFilter !== "all" && c.canal !== ctrlCanalFilter) continue;
@@ -4253,12 +4286,89 @@ function printControllersReport() {
       if (!match) { for (var zi = 0; zi < c.zonas.length; zi++) { if (c.zonas[zi].desc.toLowerCase().indexOf(search) >= 0) { match = true; break; } } }
       if (!match) continue;
     }
-    filtered.push(c);
+    result.push(c);
   }
-  filtered.sort(function(a,b){ return a.n - b.n; });
+  result.sort(function(a,b){ return a.n - b.n; });
+  return result;
+}
 
+function openCtrlPrintModal() {
+  ctrlPrintSelected = new Set();
+  // Pre-seleccionar los visibles
+  var visible = getVisibleControllers();
+  for (var i = 0; i < visible.length; i++) ctrlPrintSelected.add(visible[i].n);
+  buildCtrlPrintList();
+  document.getElementById("ctrl-print-modal").style.display = "flex";
+}
+
+function closeCtrlPrintModal() {
+  document.getElementById("ctrl-print-modal").style.display = "none";
+}
+
+function buildCtrlPrintList() {
+  var sorted = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  var html = "";
+  for (var i = 0; i < sorted.length; i++) {
+    var c = sorted[i];
+    var sel = ctrlPrintSelected.has(c.n);
+    var zonaList = c.zonas.map(function(z){ return "Z"+z.z+" "+z.desc; }).join(" · ").slice(0,60);
+    html += '<div onclick="ctrlPrintToggle(' + c.n + ')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;border:1px solid ' + (sel ? "var(--green)" : "var(--border)") + ';background:' + (sel ? "var(--green-dim)" : "var(--panel)") + '">';
+    html += '<div style="width:18px;height:18px;border-radius:4px;border:2px solid ' + (sel ? "var(--green)" : "var(--border)") + ';background:' + (sel ? "var(--green)" : "transparent") + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+    html += sel ? '<span style="color:#000;font-size:11px;font-weight:900;line-height:1">✓</span>' : "";
+    html += "</div>";
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:' + (sel ? "var(--green)" : "var(--text)") + '">N°' + c.n + " · " + c.name + "</div>";
+    html += '<div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + zonaList + (c.zonas.length > 3 ? "…" : "") + "</div>";
+    html += "</div>";
+    if (c.canal) html += '<div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);flex-shrink:0">Ch.' + c.canal + "</div>";
+    html += "</div>";
+  }
+  document.getElementById("ctrl-print-list").innerHTML = html;
+  var n = ctrlPrintSelected.size;
+  document.getElementById("ctrl-print-count").textContent = n === 0 ? "Ninguno seleccionado" : n + " seleccionado" + (n !== 1 ? "s" : "");
+}
+
+function ctrlPrintToggle(n) {
+  if (ctrlPrintSelected.has(n)) ctrlPrintSelected.delete(n);
+  else ctrlPrintSelected.add(n);
+  buildCtrlPrintList();
+}
+
+function ctrlPrintSelectAll() {
+  for (var i = 0; i < CONTROLLERS.length; i++) ctrlPrintSelected.add(CONTROLLERS[i].n);
+  buildCtrlPrintList();
+}
+
+function ctrlPrintSelectNone() {
+  ctrlPrintSelected = new Set();
+  buildCtrlPrintList();
+}
+
+function ctrlPrintSelectVisible() {
+  ctrlPrintSelected = new Set();
+  var visible = getVisibleControllers();
+  for (var i = 0; i < visible.length; i++) ctrlPrintSelected.add(visible[i].n);
+  buildCtrlPrintList();
+}
+
+function printSelectedControllers() {
+  if (ctrlPrintSelected.size === 0) { alert("Selecciona al menos un controlador."); return; }
+  var toprint = CONTROLLERS.filter(function(c){ return ctrlPrintSelected.has(c.n); });
+  toprint.sort(function(a,b){ return a.n - b.n; });
+  closeCtrlPrintModal();
+  // Reuse printControllersReport logic but with custom filtered list
+  _doPrintControllers(toprint, toprint.length + " controlador" + (toprint.length !== 1 ? "es" : "") + " seleccionado" + (toprint.length !== 1 ? "s" : ""));
+}
+
+function printControllersReport() {
+  var filtered = getVisibleControllers();
+  var search = (document.getElementById("ctrl-search") ? document.getElementById("ctrl-search").value : "").trim();
   var subtitle = search ? 'Búsqueda: "' + search + '"' : (ctrlCanalFilter !== "all" ? "Canal: " + ctrlCanalFilter : "Todos los controladores");
 
+  _doPrintControllers(filtered, subtitle);
+}
+
+function _doPrintControllers(filtered, subtitle) {
   var html = '<div class="header">';
   html += '<div class="header-left"><h1>Informe de Controladores y Zonas</h1>';
   html += '<p>Estadio Español · Departamento de Áreas Verdes · ' + subtitle + '</p></div>';
@@ -4398,6 +4508,27 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 </script>
+
+<!-- ====== MODAL: Seleccionar controladores para imprimir ====== -->
+<div id="ctrl-print-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(520px,95vw);max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:var(--green)">☑ Seleccionar controladores</div>
+      <button onclick="closeCtrlPrintModal()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:2px 6px">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button onclick="ctrlPrintSelectAll()" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Todos</button>
+      <button onclick="ctrlPrintSelectNone()" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);cursor:pointer">Ninguno</button>
+      <button onclick="ctrlPrintSelectVisible()" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Vista actual</button>
+      <span id="ctrl-print-count" style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;margin-left:4px"></span>
+    </div>
+    <div id="ctrl-print-list" style="overflow-y:auto;flex:1;max-height:52vh;display:flex;flex-direction:column;gap:4px;padding-right:4px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">
+      <button onclick="closeCtrlPrintModal()" style="padding:7px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);cursor:pointer">Cancelar</button>
+      <button onclick="printSelectedControllers()" style="padding:7px 16px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">🖨 Imprimir selección</button>
+    </div>
+  </div>
+</div>
 
 <!-- ====== MODAL: Imprimir rango de días ====== -->
 <div id="print-range-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
