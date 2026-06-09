@@ -160,6 +160,14 @@
     background: var(--green-dim); border-color: var(--green);
     color: var(--green);
   }
+  .date-btn.active {
+    background: var(--green); border-color: var(--green);
+    color: #000; font-weight: 700;
+    box-shadow: 0 0 0 2px #4ade8055;
+  }
+  .date-btn.active:hover {
+    background: var(--green); color: #000;
+  }
   .nav-arrow {
     width: 32px; height: 32px; border-radius: 8px;
     background: var(--panel); border: 1px solid var(--border);
@@ -1650,7 +1658,8 @@ var STATUS_LABELS = {
   "sin-confirmar": { label:"📋 Sin confirmar", bg:"#374151", color:"#9ca3af" },
   "ejecutado":     { label:"✅ Ejecutado",      bg:"#14532d", color:"#4ade80" },
   "cambios":       { label:"⚠️ Con cambios",    bg:"#78350f", color:"#fbbf24" },
-  "no-regado":     { label:"❌ No regado",       bg:"#7f1d1d", color:"#fca5a5" }
+  "no-regado":     { label:"❌ No regado",       bg:"#7f1d1d", color:"#fca5a5" },
+  "lluvia":        { label:"🌧 Suspendido por lluvia", bg:"#1e3a5f", color:"#93c5fd" }
 };
 
 function getDayStatus(dateStr) {
@@ -1660,15 +1669,18 @@ function getDayStatus(dateStr) {
 
 function buildDateNav() {
   var nav = document.getElementById("date-nav");
-  var start = Math.max(0, DATES.length - 15);
+  var todayIdx = findTodayIndex();
+  // Ventana: 10 anteriores a hoy + hoy + 14 futuros
+  var winStart = Math.max(0, todayIdx - 10);
+  var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
   var html = "";
-  if (start > 0) {
-    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;padding:4px 6px">+' + start + ' anteriores</span>';
+  if (winStart > 0) {
+    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;padding:4px 6px">+' + winStart + ' anteriores</span>';
   }
-  for (var i = start; i < DATES.length; i++) {
+  for (var i = winStart; i <= winEnd; i++) {
     var active = (i === currentDateIdx) ? " active" : "";
     var st = getDayStatus(DATES[i]);
-    var dot = st === "ejecutado" ? "✅" : st === "cambios" ? "⚠️" : st === "no-regado" ? "❌" : "";
+    var dot = st === "ejecutado" ? "✅" : st === "cambios" ? "⚠️" : st === "no-regado" ? "❌" : st === "lluvia" ? "🌧" : "";
     html += '<button class="date-btn' + active + '" onclick="selectDate(' + i + ')">' + (dot ? dot + " " : "") + DATES[i] + '</button>';
   }
   nav.innerHTML = html;
@@ -1700,6 +1712,7 @@ function buildHistoryPanel(dateStr) {
     html += '<button onclick="confirmDay(\'ejecutado\')" style="padding:5px 12px;background:var(--green);color:#000;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer">✅ Confirmar como ejecutado</button>';
     html += '<button onclick="confirmDay(\'cambios\')" style="padding:5px 12px;background:#d97706;color:#000;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer">⚠️ Confirmar con cambios</button>';
     html += '<button onclick="confirmDay(\'no-regado\')" style="padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">❌ No se regó</button>';
+    html += '<button onclick="confirmDay(\'lluvia\')" style="padding:5px 12px;background:#1e3a5f;color:#93c5fd;border:1px solid #3b82f6;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">🌧 Suspendido por lluvia</button>';
   } else {
     html += '<button onclick="editDayHistory()" style="padding:5px 12px;background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--blue);font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">✎ Editar registro</button>';
     html += '<button onclick="unconfirmDay()" style="padding:5px 12px;background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">↩ Deshacer confirmación</button>';
@@ -1707,8 +1720,18 @@ function buildHistoryPanel(dateStr) {
   html += '</div></div>';
 
   // If "cambios" status, show editable entries
-  if ((st === "cambios" || st === "ejecutado") && h && h.entries && h.editMode) {
-    html += buildHistoryEditTable(h.entries, dateStr);
+  if ((st === "cambios" || st === "ejecutado" || st === "lluvia") && h && h.entries && h.editMode) {
+    // Calcular qué programIds aplican actualmente a este día
+    var idx = DATES.indexOf(dateStr);
+    var currentProgs = idx >= 0 ? getProjectedEntries(idx) : [];
+    var currentProgIds = {};
+    for (var ci = 0; ci < currentProgs.length; ci++) currentProgIds[currentProgs[ci].programId] = true;
+    var entriesWithFlags = h.entries.map(function(e) {
+      var copy = Object.assign({}, e);
+      copy._obsoleto = !currentProgIds[e.programId];
+      return copy;
+    });
+    html += buildHistoryEditTable(entriesWithFlags, dateStr);
   }
 
   content.innerHTML = html;
@@ -1721,10 +1744,19 @@ function buildHistoryEditTable(entries, dateStr) {
 
   for (var i = 0; i < entries.length; i++) {
     var e = entries[i];
+    // Entrada obsoleta: el programa ya no aplica a este día (frecuencia modificada)
+    if (e._obsoleto) {
+      html += '<div style="border:1px dashed #4b5563;border-radius:8px;margin-bottom:8px;padding:7px 12px;opacity:0.45;display:flex;align-items:center;gap:8px">';
+      html += '<span style="font-family:var(--font-mono);font-size:0.68rem;text-decoration:line-through;color:var(--muted)">N°' + e.sectorN + ' ' + e.sectorName + (e.programa ? ' Pg.' + e.programa : '') + ' · ' + minToHHMM(e.start) + '</span>';
+      html += '<span style="font-family:var(--font-mono);font-size:0.6rem;background:#374151;color:#9ca3af;padding:1px 6px;border-radius:4px">cancelado / modificado</span>';
+      html += '</div>';
+      continue;
+    }
     var allExec = e.zonas.length === 0 || e.zonas.every(function(z){ return z.ejecutado !== false; });
     var noneExec = e.zonas.length > 0 && e.zonas.every(function(z){ return z.ejecutado === false; });
     var isNew = e.isNew || false;
-    var cardBg = noneExec ? "background:#7f1d1d22;border-color:#dc2626;" : (!allExec ? "background:#78350f18;border-color:#d97706;" : (isNew ? "border-color:#3b82f6;" : ""));
+    var allLluviaEntry = e.zonas.length > 0 && e.zonas.every(function(z){ return z.ejecutado === "lluvia"; });
+    var cardBg = noneExec ? "background:#7f1d1d22;border-color:#dc2626;" : (allLluviaEntry ? "background:#1e3a5f22;border-color:#3b82f6;" : (!allExec ? "background:#78350f18;border-color:#d97706;" : (isNew ? "border-color:#3b82f6;" : "")));
 
     html += '<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;' + cardBg + '">';
 
@@ -1750,19 +1782,22 @@ function buildHistoryEditTable(entries, dateStr) {
         var z = e.zonas[zi];
         var zExec = z.ejecutado !== false;
         var zAnomalo = z.ejecutado === "anomalo";
-        var zBg = zAnomalo ? "background:#78350f18;" : (!zExec ? "background:#7f1d1d18;" : "");
+        var zLluvia  = z.ejecutado === "lluvia";
+        var zBg = zAnomalo ? "background:#78350f18;" : (zLluvia ? "background:#1e3a5f22;" : (!zExec ? "background:#7f1d1d18;" : ""));
         html += '<tr style="border-top:1px solid var(--border);' + zBg + '">';
         html += '<td style="padding:4px 6px;font-family:var(--font-mono);font-size:0.68rem"><span style="color:var(--blue)">Z' + z.id + '</span> ' + (z.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '</td>';
         html += '<td style="padding:4px 6px;text-align:center"><input type="number" value="' + (z.minReal !== undefined ? z.minReal : z.min) + '" min="0" max="480" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'minReal\',this.value)" style="width:46px;text-align:center;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>';
         // 3-state selector
-        var selVal = z.ejecutado === false ? "false" : (z.ejecutado === "anomalo" ? "anomalo" : "true");
+        var selVal = z.ejecutado === false ? "false" : (z.ejecutado === "anomalo" ? "anomalo" : (z.ejecutado === "lluvia" ? "lluvia" : "true"));
+        var notaPlaceholder = selVal === "anomalo" ? "ej. boquilla rota, pop-up doblado..." : selVal === "lluvia" ? "ej. lluvia equiv. a riego, suelo húmedo..." : "ej. falla válvula";
         html += '<td style="padding:4px 6px;text-align:center">';
         html += '<select onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'ejecutado\',this.value)" style="padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">';
-        html += '<option value="true"'  + (selVal==="true"    ? " selected" : "") + '>✅ OK</option>';
+        html += '<option value="true"'   + (selVal==="true"    ? " selected" : "") + '>✅ OK</option>';
         html += '<option value="anomalo"' + (selVal==="anomalo" ? " selected" : "") + '>⚠️ Anómalo</option>';
-        html += '<option value="false"' + (selVal==="false"   ? " selected" : "") + '>❌ No regó</option>';
+        html += '<option value="lluvia"'  + (selVal==="lluvia"  ? " selected" : "") + '>🌧 Suspendido</option>';
+        html += '<option value="false"'  + (selVal==="false"   ? " selected" : "") + '>❌ No regó</option>';
         html += '</select></td>';
-        html += '<td style="padding:4px 6px"><input type="text" value="' + (z.nota||"") + '" placeholder="' + (selVal==="anomalo" ? "ej. boquilla rota, pop-up doblado..." : "ej. falla válvula") + '" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'nota\',this.value)" style="width:100%;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>';
+        html += '<td style="padding:4px 6px"><input type="text" value="' + (z.nota||"") + '" placeholder="' + notaPlaceholder + '" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'nota\',this.value)" style="width:100%;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>';
         html += '</tr>';
       }
       html += '</tbody></table></div>';
@@ -1797,9 +1832,10 @@ function updateZonaEntry(dateStr, entryIdx, zonaIdx, field, value) {
   if (!z) return;
   if (field === "minReal")   { z.minReal = parseInt(value, 10) || 0; }
   if (field === "ejecutado") {
-    // value comes as string from select: "true" | "anomalo" | "false"
+    // value comes as string from select: "true" | "anomalo" | "lluvia" | "false"
     if (value === "true" || value === true)   z.ejecutado = true;
     else if (value === "anomalo")             z.ejecutado = "anomalo";
+    else if (value === "lluvia")              z.ejecutado = "lluvia";
     else                                      z.ejecutado = false;
   }
   if (field === "nota")      { z.nota = value; }
@@ -1812,10 +1848,13 @@ function updateZonaEntry(dateStr, entryIdx, zonaIdx, field, value) {
   }
   HISTORY[dateStr].entries[entryIdx].durReal = totalReal;
   // Recalcular ejecutado del programa
-  var allExec = allZonas.every(function(z){ return z.ejecutado === true; });
-  var anyExec = allZonas.some(function(z){ return z.ejecutado !== false; });
-  var anyAnomalo = allZonas.some(function(z){ return z.ejecutado === "anomalo"; });
-  HISTORY[dateStr].entries[entryIdx].ejecutado = anyExec ? (anyAnomalo ? "anomalo" : true) : false;
+  var allExec   = allZonas.every(function(z){ return z.ejecutado === true; });
+  var anyExec   = allZonas.some(function(z){ return z.ejecutado !== false; });
+  var anyAnomalo= allZonas.some(function(z){ return z.ejecutado === "anomalo"; });
+  var allLluvia = allZonas.length > 0 && allZonas.every(function(z){ return z.ejecutado === "lluvia"; });
+  var anyLluvia = allZonas.some(function(z){ return z.ejecutado === "lluvia"; });
+  var noneExecZ = allZonas.every(function(z){ return z.ejecutado === false; });
+  HISTORY[dateStr].entries[entryIdx].ejecutado = noneExecZ ? false : (allLluvia ? "lluvia" : (anyAnomalo ? "anomalo" : (anyLluvia ? "lluvia" : true)));
 }
 
 function setAllZonasEjecutado(dateStr, entryIdx, exec) {
@@ -1869,7 +1908,16 @@ function confirmDay(status) {
     editMode: false
   };
   if (status === "no-regado") {
-    for (var i = 0; i < entries.length; i++) entries[i].ejecutado = false;
+    for (var i = 0; i < entries.length; i++) {
+      entries[i].ejecutado = false;
+      if (entries[i].zonas) for (var zi = 0; zi < entries[i].zonas.length; zi++) entries[i].zonas[zi].ejecutado = false;
+    }
+  }
+  if (status === "lluvia") {
+    for (var i = 0; i < entries.length; i++) {
+      entries[i].ejecutado = "lluvia";
+      if (entries[i].zonas) for (var zi = 0; zi < entries[i].zonas.length; zi++) entries[i].zonas[zi].ejecutado = "lluvia";
+    }
   }
   saveToStorage();
   buildScheduleForDate(currentDateIdx);
@@ -1922,16 +1970,24 @@ function saveHistoryEdits(dateStr) {
     HISTORY[dateStr].editMode = false;
     // Update status based on entries — anomalo counts as partial execution
     var allEntries = HISTORY[dateStr].entries;
-    var allExec   = allEntries.every(function(e){ return e.ejecutado === true; });
-    var noneExec  = allEntries.every(function(e){ return !e.ejecutado; });
-    var anyAnomalo = allEntries.some(function(e){
+    var allEntries_noObs = allEntries.filter(function(e){ return !e._obsoleto; });
+    var allExec    = allEntries_noObs.every(function(e){ return e.ejecutado === true; });
+    var noneExec   = allEntries_noObs.every(function(e){ return !e.ejecutado; });
+    var allLluvia  = allEntries_noObs.length > 0 && allEntries_noObs.every(function(e){ return e.ejecutado === "lluvia"; });
+    var anyLluvia  = allEntries_noObs.some(function(e){
+      if (e.ejecutado === "lluvia") return true;
+      if (e.zonas && e.zonas.some(function(z){ return z.ejecutado === "lluvia"; })) return true;
+      return false;
+    });
+    var anyAnomalo = allEntries_noObs.some(function(e){
       if (e.ejecutado === "anomalo") return true;
       if (e.zonas && e.zonas.some(function(z){ return z.ejecutado === "anomalo"; })) return true;
       return false;
     });
-    if (noneExec)            HISTORY[dateStr].status = "no-regado";
-    else if (allExec && !anyAnomalo) HISTORY[dateStr].status = "ejecutado";
-    else                     HISTORY[dateStr].status = "cambios";
+    if (noneExec)                       HISTORY[dateStr].status = "no-regado";
+    else if (allLluvia)                 HISTORY[dateStr].status = "lluvia";
+    else if (allExec && !anyAnomalo && !anyLluvia) HISTORY[dateStr].status = "ejecutado";
+    else                                HISTORY[dateStr].status = "cambios";
     HISTORY[dateStr].confirmedAt = new Date().toISOString();
   }
   saveToStorage();
@@ -1993,10 +2049,19 @@ function buildScheduleForDate(idx) {
   var events = [];
   if (useHistory) {
     events = h.entries.slice(); // copia del historial
-    // Agregar programas que no estaban cuando se confirmó
+    // IDs de programas que ACTUALMENTE aplican a este día
+    var currentProgs = getProjectedEntries(idx);
+    var currentIds = {};
+    for (var i = 0; i < currentProgs.length; i++) currentIds[currentProgs[i].programId] = true;
+    // IDs ya presentes en historial
     var histIds = {};
     for (var i = 0; i < h.entries.length; i++) histIds[h.entries[i].programId] = true;
-    var newProgs = getProjectedEntries(idx).filter(function(e) { return !histIds[e.programId]; });
+    // Marcar como obsoletos los entries del historial cuyo programa ya no aplica hoy
+    for (var i = 0; i < events.length; i++) {
+      if (!currentIds[events[i].programId]) events[i]._obsoleto = true;
+    }
+    // Agregar programas que no estaban cuando se confirmó (nuevos)
+    var newProgs = currentProgs.filter(function(e) { return !histIds[e.programId]; });
     for (var i = 0; i < newProgs.length; i++) {
       newProgs[i].isNew = true;
       events.push(newProgs[i]);
@@ -2024,6 +2089,8 @@ function buildScheduleForDate(idx) {
 
   for (var i = 0; i < events.length; i++) {
     var ev = events[i];
+    // Entrada obsoleta: el programa fue modificado y ya no aplica a este día
+    if (ev._obsoleto) continue;
     var sectorN    = ev.sectorN;
     var sectorName = ev.sectorName;
     var programa   = ev.programa   || "";
@@ -2033,9 +2100,11 @@ function buildScheduleForDate(idx) {
     var notas      = ev.notas      || "";
     var ejecutado  = ev.ejecutado  !== false;
     var esAnomalo  = ev.ejecutado  === "anomalo";
+    var esLluvia   = ev.ejecutado  === "lluvia";
     var color = ctrlColor(sectorN);
     if (!ejecutado) color = "#6b7280";
     if (esAnomalo)  color = "#d97706";
+    if (esLluvia)   color = "#60a5fa";
 
     var endMin = startMin + durMin;
     var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
@@ -2050,11 +2119,12 @@ function buildScheduleForDate(idx) {
     var rowStyle = "";
     if (useHistory && !ejecutado) rowStyle = "opacity:0.5;";
     if (useHistory && esAnomalo)  rowStyle = "opacity:0.85;";
+    if (useHistory && esLluvia)   rowStyle = "opacity:0.7;";
 
     html += '<div class="schedule-row" style="' + rowStyle + '">';
     html += '<div class="sr-top">';
     html += '<span class="time-tag">' + minToHHMM(startMin) + '</span>';
-    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '') + '</span>';
+    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '') + (useHistory && esLluvia ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido</span>' : '') + '</span>';
     html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
     html += '</div>';
 
