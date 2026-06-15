@@ -3949,9 +3949,85 @@ function getNormalizedZonas(ev) {
 ============================================== */
 var prSelectedDays = new Set();
 
+// Asegura que todos los días de la semana que contiene isoRef existen en DATES.
+// Retorna el ISO del lunes de esa semana.
+function ensureWeekInDates(isoRef) {
+  var monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
+  var ref = new Date(isoRef + "T12:00:00");
+  var dow = ref.getDay();
+  var diffToMon = (dow === 0) ? -6 : 1 - dow;
+  var monday = new Date(ref);
+  monday.setDate(ref.getDate() + diffToMon);
+
+  for (var d = 0; d < 7; d++) {
+    var cur = new Date(monday);
+    cur.setDate(monday.getDate() + d);
+    var y  = cur.getFullYear();
+    var m  = cur.getMonth() + 1;
+    var dd = cur.getDate();
+    var label = dayNames[cur.getDay()] + " " + dd + " " + monthNames[m];
+    var curISO = y + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
+
+    var exists = false;
+    for (var i = 0; i < DATES.length; i++) {
+      if (DATES[i] === label) { exists = true; break; }
+    }
+    if (exists) continue;
+
+    var insertAt = DATES.length;
+    for (var i = 0; i < DATES.length; i++) {
+      if (dateToISO(DATES[i]) > curISO) { insertAt = i; break; }
+    }
+    DATES.splice(insertAt, 0, label);
+  }
+
+  // Retornar ISO del lunes
+  var mm = monday.getMonth() + 1;
+  var md = monday.getDate();
+  return monday.getFullYear() + "-" + (mm < 10 ? "0" : "") + mm + "-" + (md < 10 ? "0" : "") + md;
+}
+
+// Asegura que los próximos N días desde isoRef existen en DATES.
+function ensureNextDaysInDates(isoRef, n) {
+  var monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
+  var ref = new Date(isoRef + "T12:00:00");
+  for (var d = 0; d < n; d++) {
+    var cur = new Date(ref);
+    cur.setDate(ref.getDate() + d);
+    var y  = cur.getFullYear();
+    var m  = cur.getMonth() + 1;
+    var dd = cur.getDate();
+    var label = dayNames[cur.getDay()] + " " + dd + " " + monthNames[m];
+    var curISO = y + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
+
+    var exists = false;
+    for (var i = 0; i < DATES.length; i++) {
+      if (DATES[i] === label) { exists = true; break; }
+    }
+    if (exists) continue;
+
+    var insertAt = DATES.length;
+    for (var i = 0; i < DATES.length; i++) {
+      if (dateToISO(DATES[i]) > curISO) { insertAt = i; break; }
+    }
+    DATES.splice(insertAt, 0, label);
+  }
+}
+
 function openPrintRangeModal() {
   prSelectedDays = new Set();
-  // Pre-seleccionar el día actual
+  // Asegurar que la semana actual está en DATES y pre-seleccionar el día actual
+  var todayIdx = findTodayIndex();
+  if (todayIdx >= 0) {
+    var todayISO = dateToISO(DATES[todayIdx]);
+    ensureWeekInDates(todayISO);
+    saveToStorage();
+    buildPMR(); // reconstruir nav para reflejar días nuevos
+    // Re-buscar índice del día actual después de posibles inserciones
+    todayIdx = findTodayIndex();
+  }
   prSelectedDays.add(currentDateIdx);
   buildPrintRangeDays();
   var modal = document.getElementById("print-range-modal");
@@ -3965,13 +4041,13 @@ function closePrintRangeModal() {
 function buildPrintRangeDays() {
   var todayIdx = findTodayIndex();
   var winStart = Math.max(0, todayIdx - 10);
-  var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
+  var winEnd   = Math.min(DATES.length - 1, todayIdx + 20);
   var html = "";
   for (var i = winStart; i <= winEnd; i++) {
     var sel = prSelectedDays.has(i);
     var st = getDayStatus(DATES[i]);
     var dot = st === "ejecutado" ? "✅ " : st === "cambios" ? "⚠️ " : st === "no-regado" ? "❌ " : st === "lluvia" ? "🌧 " : "";
-    var isToday = (i === findTodayIndex());
+    var isToday = (i === todayIdx);
     var todayMark = isToday ? ' style="outline:2px solid var(--green);outline-offset:2px;' : ' style="';
     html += '<button onclick="prToggleDay(' + i + ')" ' + todayMark +
       'padding:5px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.68rem;cursor:pointer;border:1px solid ' +
@@ -3989,31 +4065,37 @@ function prToggleDay(idx) {
 
 function prSelectRange(mode) {
   var todayIdx = findTodayIndex();
+  var todayISO = todayIdx >= 0 ? dateToISO(DATES[todayIdx]) : new Date().toISOString().slice(0,10);
   prSelectedDays = new Set();
+
   if (mode === "today") {
     prSelectedDays.add(todayIdx);
   } else if (mode === "tomorrow") {
+    ensureNextDaysInDates(todayISO, 2);
+    saveToStorage(); buildPMR();
+    todayIdx = findTodayIndex();
     if (todayIdx + 1 < DATES.length) prSelectedDays.add(todayIdx + 1);
   } else if (mode === "week") {
-    // Lunes a domingo de la semana actual
-    var todayISO = dateToISO(DATES[todayIdx]);
-    var d = new Date(todayISO + "T12:00:00");
-    var dow = d.getDay(); // 0=dom
-    var diffToMon = dow === 0 ? -6 : 1 - dow;
-    var monDate = new Date(d); monDate.setDate(d.getDate() + diffToMon);
-    var sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
+    // Lunes a domingo de la semana actual — asegurar que todos los días existen
+    var monISO = ensureWeekInDates(todayISO);
+    var d = new Date(monISO + "T12:00:00");
+    var sunDate = new Date(d); sunDate.setDate(d.getDate() + 6);
+    var sunISO = sunDate.toISOString().slice(0,10);
+    saveToStorage(); buildPMR();
     for (var i = 0; i < DATES.length; i++) {
       var iso = dateToISO(DATES[i]);
-      if (iso >= monDate.toISOString().slice(0,10) && iso <= sunDate.toISOString().slice(0,10))
-        prSelectedDays.add(i);
+      if (iso >= monISO && iso <= sunISO) prSelectedDays.add(i);
     }
   } else if (mode === "next7") {
-    var todayISO = dateToISO(DATES[todayIdx]);
+    ensureNextDaysInDates(todayISO, 7);
+    saveToStorage(); buildPMR();
+    todayIdx = findTodayIndex();
+    var count = 0;
     for (var i = 0; i < DATES.length; i++) {
       var iso = dateToISO(DATES[i]);
       if (iso >= todayISO) {
         prSelectedDays.add(i);
-        if (prSelectedDays.size >= 7) break;
+        if (++count >= 7) break;
       }
     }
   } else if (mode === "none") {
