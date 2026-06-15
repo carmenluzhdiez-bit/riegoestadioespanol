@@ -72,23 +72,17 @@
     gap: 4px;
     padding: 16px 40px 0;
     border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
   }
-  .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    padding: 8px 14px;
+    padding: 8px 20px;
     border-radius: 8px 8px 0 0;
-    font-size: 0.78rem; font-weight: 600;
+    font-size: 0.82rem; font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
     border-bottom: none;
     color: var(--muted);
     transition: all .2s;
     background: none;
-    white-space: nowrap;
-    flex-shrink: 0;
   }
   .tab:hover { color: var(--text); background: var(--panel); }
   .tab.active {
@@ -165,14 +159,6 @@
   .date-btn:hover, .date-btn.sel {
     background: var(--green-dim); border-color: var(--green);
     color: var(--green);
-  }
-  .date-btn.active {
-    background: var(--green); border-color: var(--green);
-    color: #000; font-weight: 700;
-    box-shadow: 0 0 0 2px #4ade8055;
-  }
-  .date-btn.active:hover {
-    background: var(--green); color: #000;
   }
   .nav-arrow {
     width: 32px; height: 32px; border-radius: 8px;
@@ -713,11 +699,11 @@
 
 <div class="tabs">
   <button class="tab active" data-tab="pmr" onclick="showTab('pmr')">📅 PMR EE</button>
-  <button class="tab" data-tab="wifi" onclick="showTab('wifi')">📡 WiFi</button>
-  <button class="tab" data-tab="conflictos" id="tab-conflictos" onclick="showTab('conflictos')">⚠️ Conflictos</button>
-  <button class="tab only-editor" data-tab="editor" onclick="showTab('editor')">✏️ Programar</button>
-  <button class="tab" data-tab="controladores" onclick="showTab('controladores')">🗂️ Controladores</button>
-  <button class="tab only-admin" data-tab="config" onclick="showTab('config')">⚙️ Config.</button>
+  <button class="tab" data-tab="wifi" onclick="showTab('wifi')">📡 Sectores WiFi</button>
+  <button class="tab" data-tab="conflictos" id="tab-conflictos" onclick="showTab('conflictos')">⚠️ Conflictos de Bomba</button>
+  <button class="tab only-editor" data-tab="editor" onclick="showTab('editor')">✏️ Programar Riego</button>
+  <button class="tab" data-tab="controladores" onclick="showTab('controladores')">🗂️ Controladores y Zonas</button>
+  <button class="tab only-admin" data-tab="config" onclick="showTab('config')">⚙️ Configuración</button>
 </div>
 
 <main>
@@ -730,7 +716,6 @@
     <div style="display:flex;gap:8px;align-items:center">
       <input type="date" id="new-day-input" style="padding:5px 10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.75rem;outline:none">
       <button onclick="addPMRDay()" style="padding:5px 12px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">+ Agregar día</button>
-      <button onclick="addPMRWeek()" style="padding:5px 12px;background:var(--panel);color:var(--green);border:1px solid var(--green);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer" title="Agrega los 7 días de la semana que contiene la fecha seleccionada">+ Semana completa</button>
     </div>
   </div>
   <div class="date-nav" id="date-nav"></div>
@@ -752,10 +737,7 @@
       </div>
       <span id="day-status-badge" style="font-size:0.7rem;font-family:var(--font-mono);padding:4px 12px;border-radius:20px;font-weight:700"></span>
     </div>
-    <div style="display:flex;gap:6px">
-      <button onclick="printDayReport()" style="padding:7px 14px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">🖨 Este día</button>
-      <button onclick="openPrintRangeModal()" style="padding:7px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;white-space:nowrap">📅 Varios días</button>
-    </div>
+    <button onclick="printDayReport()" style="padding:7px 16px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">🖨 Imprimir / PDF</button>
   </div>
   <!-- Panel de confirmación (solo admin) -->
   <div id="history-panel" class="only-admin" style="display:none;margin-bottom:16px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px">
@@ -932,8 +914,7 @@
     <div class="section-title" style="margin:0">Buscar / filtrar</div>
     <div style="display:flex;gap:8px">
       <button onclick="buildControllers()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🔄 Actualizar</button>
-      <button onclick="printControllersReport()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🖨 Vista actual</button>
-      <button onclick="openCtrlPrintModal()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">☑ Seleccionar</button>
+      <button onclick="printControllersReport()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🖨 Imprimir / PDF</button>
     </div>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
@@ -1668,8 +1649,7 @@ var STATUS_LABELS = {
   "sin-confirmar": { label:"📋 Sin confirmar", bg:"#374151", color:"#9ca3af" },
   "ejecutado":     { label:"✅ Ejecutado",      bg:"#14532d", color:"#4ade80" },
   "cambios":       { label:"⚠️ Con cambios",    bg:"#78350f", color:"#fbbf24" },
-  "no-regado":     { label:"❌ No regado",       bg:"#7f1d1d", color:"#fca5a5" },
-  "lluvia":        { label:"🌧 Suspendido por lluvia", bg:"#1e3a5f", color:"#93c5fd" }
+  "no-regado":     { label:"❌ No regado",       bg:"#7f1d1d", color:"#fca5a5" }
 };
 
 function getDayStatus(dateStr) {
@@ -1679,18 +1659,15 @@ function getDayStatus(dateStr) {
 
 function buildDateNav() {
   var nav = document.getElementById("date-nav");
-  var todayIdx = findTodayIndex();
-  // Ventana: 10 anteriores a hoy + hoy + 14 futuros
-  var winStart = Math.max(0, todayIdx - 10);
-  var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
+  var start = Math.max(0, DATES.length - 15);
   var html = "";
-  if (winStart > 0) {
-    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;padding:4px 6px">+' + winStart + ' anteriores</span>';
+  if (start > 0) {
+    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;padding:4px 6px">+' + start + ' anteriores</span>';
   }
-  for (var i = winStart; i <= winEnd; i++) {
+  for (var i = start; i < DATES.length; i++) {
     var active = (i === currentDateIdx) ? " active" : "";
     var st = getDayStatus(DATES[i]);
-    var dot = st === "ejecutado" ? "✅" : st === "cambios" ? "⚠️" : st === "no-regado" ? "❌" : st === "lluvia" ? "🌧" : "";
+    var dot = st === "ejecutado" ? "✅" : st === "cambios" ? "⚠️" : st === "no-regado" ? "❌" : "";
     html += '<button class="date-btn' + active + '" onclick="selectDate(' + i + ')">' + (dot ? dot + " " : "") + DATES[i] + '</button>';
   }
   nav.innerHTML = html;
@@ -1722,7 +1699,6 @@ function buildHistoryPanel(dateStr) {
     html += '<button onclick="confirmDay(\'ejecutado\')" style="padding:5px 12px;background:var(--green);color:#000;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer">✅ Confirmar como ejecutado</button>';
     html += '<button onclick="confirmDay(\'cambios\')" style="padding:5px 12px;background:#d97706;color:#000;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer">⚠️ Confirmar con cambios</button>';
     html += '<button onclick="confirmDay(\'no-regado\')" style="padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">❌ No se regó</button>';
-    html += '<button onclick="confirmDay(\'lluvia\')" style="padding:5px 12px;background:#1e3a5f;color:#93c5fd;border:1px solid #3b82f6;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">🌧 Suspendido por lluvia</button>';
   } else {
     html += '<button onclick="editDayHistory()" style="padding:5px 12px;background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--blue);font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">✎ Editar registro</button>';
     html += '<button onclick="unconfirmDay()" style="padding:5px 12px;background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">↩ Deshacer confirmación</button>';
@@ -1730,18 +1706,8 @@ function buildHistoryPanel(dateStr) {
   html += '</div></div>';
 
   // If "cambios" status, show editable entries
-  if ((st === "cambios" || st === "ejecutado" || st === "lluvia") && h && h.entries && h.editMode) {
-    // Calcular qué programIds aplican actualmente a este día
-    var idx = DATES.indexOf(dateStr);
-    var currentProgs = idx >= 0 ? getProjectedEntries(idx) : [];
-    var currentProgIds = {};
-    for (var ci = 0; ci < currentProgs.length; ci++) currentProgIds[currentProgs[ci].programId] = true;
-    var entriesWithFlags = h.entries.map(function(e) {
-      var copy = Object.assign({}, e);
-      copy._obsoleto = !currentProgIds[e.programId];
-      return copy;
-    });
-    html += buildHistoryEditTable(entriesWithFlags, dateStr);
+  if ((st === "cambios" || st === "ejecutado") && h && h.entries && h.editMode) {
+    html += buildHistoryEditTable(h.entries, dateStr);
   }
 
   content.innerHTML = html;
@@ -1754,19 +1720,10 @@ function buildHistoryEditTable(entries, dateStr) {
 
   for (var i = 0; i < entries.length; i++) {
     var e = entries[i];
-    // Entrada obsoleta: el programa ya no aplica a este día (frecuencia modificada)
-    if (e._obsoleto) {
-      html += '<div style="border:1px dashed #4b5563;border-radius:8px;margin-bottom:8px;padding:7px 12px;opacity:0.45;display:flex;align-items:center;gap:8px">';
-      html += '<span style="font-family:var(--font-mono);font-size:0.68rem;text-decoration:line-through;color:var(--muted)">N°' + e.sectorN + ' ' + e.sectorName + (e.programa ? ' Pg.' + e.programa : '') + ' · ' + minToHHMM(e.start) + '</span>';
-      html += '<span style="font-family:var(--font-mono);font-size:0.6rem;background:#374151;color:#9ca3af;padding:1px 6px;border-radius:4px">cancelado / modificado</span>';
-      html += '</div>';
-      continue;
-    }
     var allExec = e.zonas.length === 0 || e.zonas.every(function(z){ return z.ejecutado !== false; });
     var noneExec = e.zonas.length > 0 && e.zonas.every(function(z){ return z.ejecutado === false; });
     var isNew = e.isNew || false;
-    var allLluviaEntry = e.zonas.length > 0 && e.zonas.every(function(z){ return z.ejecutado === "lluvia"; });
-    var cardBg = noneExec ? "background:#7f1d1d22;border-color:#dc2626;" : (allLluviaEntry ? "background:#1e3a5f22;border-color:#3b82f6;" : (!allExec ? "background:#78350f18;border-color:#d97706;" : (isNew ? "border-color:#3b82f6;" : "")));
+    var cardBg = noneExec ? "background:#7f1d1d22;border-color:#dc2626;" : (!allExec ? "background:#78350f18;border-color:#d97706;" : (isNew ? "border-color:#3b82f6;" : ""));
 
     html += '<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;' + cardBg + '">';
 
@@ -1786,28 +1743,17 @@ function buildHistoryEditTable(entries, dateStr) {
       html += '<table style="width:100%;border-collapse:collapse">';
       html += '<thead><tr><th style="text-align:left;padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted)">Zona</th>';
       html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-align:center">Min. real</th>';
-      html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-align:center">Estado riego</th>';
+      html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);text-align:center">Regó</th>';
       html += '<th style="padding:3px 6px;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted)">Nota zona</th></tr></thead><tbody>';
       for (var zi = 0; zi < e.zonas.length; zi++) {
         var z = e.zonas[zi];
         var zExec = z.ejecutado !== false;
-        var zAnomalo = z.ejecutado === "anomalo";
-        var zLluvia  = z.ejecutado === "lluvia";
-        var zBg = zAnomalo ? "background:#78350f18;" : (zLluvia ? "background:#1e3a5f22;" : (!zExec ? "background:#7f1d1d18;" : ""));
+        var zBg = zExec ? "" : "background:#7f1d1d18;";
         html += '<tr style="border-top:1px solid var(--border);' + zBg + '">';
         html += '<td style="padding:4px 6px;font-family:var(--font-mono);font-size:0.68rem"><span style="color:var(--blue)">Z' + z.id + '</span> ' + (z.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '</td>';
         html += '<td style="padding:4px 6px;text-align:center"><input type="number" value="' + (z.minReal !== undefined ? z.minReal : z.min) + '" min="0" max="480" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'minReal\',this.value)" style="width:46px;text-align:center;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>';
-        // 3-state selector
-        var selVal = z.ejecutado === false ? "false" : (z.ejecutado === "anomalo" ? "anomalo" : (z.ejecutado === "lluvia" ? "lluvia" : "true"));
-        var notaPlaceholder = selVal === "anomalo" ? "ej. boquilla rota, pop-up doblado..." : selVal === "lluvia" ? "ej. lluvia equiv. a riego, suelo húmedo..." : "ej. falla válvula";
-        html += '<td style="padding:4px 6px;text-align:center">';
-        html += '<select onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'ejecutado\',this.value)" style="padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">';
-        html += '<option value="true"'   + (selVal==="true"    ? " selected" : "") + '>✅ OK</option>';
-        html += '<option value="anomalo"' + (selVal==="anomalo" ? " selected" : "") + '>⚠️ Anómalo</option>';
-        html += '<option value="lluvia"'  + (selVal==="lluvia"  ? " selected" : "") + '>🌧 Suspendido</option>';
-        html += '<option value="false"'  + (selVal==="false"   ? " selected" : "") + '>❌ No regó</option>';
-        html += '</select></td>';
-        html += '<td style="padding:4px 6px"><input type="text" value="' + (z.nota||"") + '" placeholder="' + notaPlaceholder + '" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'nota\',this.value)" style="width:100%;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>';
+        html += '<td style="padding:4px 6px;text-align:center"><input type="checkbox"' + (zExec ? " checked" : "") + ' onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'ejecutado\',this.checked)" style="accent-color:var(--green);width:15px;height:15px;cursor:pointer"></td>';
+        html += '<td style="padding:4px 6px"><input type="text" value="' + (z.nota||"") + '" placeholder="ej. falla válvula" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'nota\',this.value)" style="width:100%;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>';
         html += '</tr>';
       }
       html += '</tbody></table></div>';
@@ -1841,30 +1787,19 @@ function updateZonaEntry(dateStr, entryIdx, zonaIdx, field, value) {
   var z = HISTORY[dateStr].entries[entryIdx].zonas[zonaIdx];
   if (!z) return;
   if (field === "minReal")   { z.minReal = parseInt(value, 10) || 0; }
-  if (field === "ejecutado") {
-    // value comes as string from select: "true" | "anomalo" | "lluvia" | "false"
-    if (value === "true" || value === true)   z.ejecutado = true;
-    else if (value === "anomalo")             z.ejecutado = "anomalo";
-    else if (value === "lluvia")              z.ejecutado = "lluvia";
-    else                                      z.ejecutado = false;
-  }
+  if (field === "ejecutado") { z.ejecutado = value; }
   if (field === "nota")      { z.nota = value; }
   // Recalcular durReal del programa desde zonas
   var totalReal = 0;
   var allZonas = HISTORY[dateStr].entries[entryIdx].zonas;
   for (var zi = 0; zi < allZonas.length; zi++) {
-    // anomalo counts time (water did flow), only false skips
     if (allZonas[zi].ejecutado !== false) totalReal += (allZonas[zi].minReal !== undefined ? allZonas[zi].minReal : allZonas[zi].min) || 0;
   }
   HISTORY[dateStr].entries[entryIdx].durReal = totalReal;
   // Recalcular ejecutado del programa
-  var allExec   = allZonas.every(function(z){ return z.ejecutado === true; });
-  var anyExec   = allZonas.some(function(z){ return z.ejecutado !== false; });
-  var anyAnomalo= allZonas.some(function(z){ return z.ejecutado === "anomalo"; });
-  var allLluvia = allZonas.length > 0 && allZonas.every(function(z){ return z.ejecutado === "lluvia"; });
-  var anyLluvia = allZonas.some(function(z){ return z.ejecutado === "lluvia"; });
-  var noneExecZ = allZonas.every(function(z){ return z.ejecutado === false; });
-  HISTORY[dateStr].entries[entryIdx].ejecutado = noneExecZ ? false : (allLluvia ? "lluvia" : (anyAnomalo ? "anomalo" : (anyLluvia ? "lluvia" : true)));
+  var allExec = allZonas.every(function(z){ return z.ejecutado !== false; });
+  var anyExec = allZonas.some(function(z){ return z.ejecutado !== false; });
+  HISTORY[dateStr].entries[entryIdx].ejecutado = anyExec;
 }
 
 function setAllZonasEjecutado(dateStr, entryIdx, exec) {
@@ -1918,16 +1853,7 @@ function confirmDay(status) {
     editMode: false
   };
   if (status === "no-regado") {
-    for (var i = 0; i < entries.length; i++) {
-      entries[i].ejecutado = false;
-      if (entries[i].zonas) for (var zi = 0; zi < entries[i].zonas.length; zi++) entries[i].zonas[zi].ejecutado = false;
-    }
-  }
-  if (status === "lluvia") {
-    for (var i = 0; i < entries.length; i++) {
-      entries[i].ejecutado = "lluvia";
-      if (entries[i].zonas) for (var zi = 0; zi < entries[i].zonas.length; zi++) entries[i].zonas[zi].ejecutado = "lluvia";
-    }
+    for (var i = 0; i < entries.length; i++) entries[i].ejecutado = false;
   }
   saveToStorage();
   buildScheduleForDate(currentDateIdx);
@@ -1978,26 +1904,12 @@ function updateHistoryEntry(dateStr, idx, field, value) {
 function saveHistoryEdits(dateStr) {
   if (HISTORY[dateStr]) {
     HISTORY[dateStr].editMode = false;
-    // Update status based on entries — anomalo counts as partial execution
-    var allEntries = HISTORY[dateStr].entries;
-    var allEntries_noObs = allEntries.filter(function(e){ return !e._obsoleto; });
-    var allExec    = allEntries_noObs.every(function(e){ return e.ejecutado === true; });
-    var noneExec   = allEntries_noObs.every(function(e){ return !e.ejecutado; });
-    var allLluvia  = allEntries_noObs.length > 0 && allEntries_noObs.every(function(e){ return e.ejecutado === "lluvia"; });
-    var anyLluvia  = allEntries_noObs.some(function(e){
-      if (e.ejecutado === "lluvia") return true;
-      if (e.zonas && e.zonas.some(function(z){ return z.ejecutado === "lluvia"; })) return true;
-      return false;
-    });
-    var anyAnomalo = allEntries_noObs.some(function(e){
-      if (e.ejecutado === "anomalo") return true;
-      if (e.zonas && e.zonas.some(function(z){ return z.ejecutado === "anomalo"; })) return true;
-      return false;
-    });
-    if (noneExec)                       HISTORY[dateStr].status = "no-regado";
-    else if (allLluvia)                 HISTORY[dateStr].status = "lluvia";
-    else if (allExec && !anyAnomalo && !anyLluvia) HISTORY[dateStr].status = "ejecutado";
-    else                                HISTORY[dateStr].status = "cambios";
+    // Update status based on entries
+    var allExec = HISTORY[dateStr].entries.every(function(e){ return e.ejecutado; });
+    var noneExec = HISTORY[dateStr].entries.every(function(e){ return !e.ejecutado; });
+    if (noneExec) HISTORY[dateStr].status = "no-regado";
+    else if (allExec) HISTORY[dateStr].status = "ejecutado";
+    else HISTORY[dateStr].status = "cambios";
     HISTORY[dateStr].confirmedAt = new Date().toISOString();
   }
   saveToStorage();
@@ -2059,19 +1971,10 @@ function buildScheduleForDate(idx) {
   var events = [];
   if (useHistory) {
     events = h.entries.slice(); // copia del historial
-    // IDs de programas que ACTUALMENTE aplican a este día
-    var currentProgs = getProjectedEntries(idx);
-    var currentIds = {};
-    for (var i = 0; i < currentProgs.length; i++) currentIds[currentProgs[i].programId] = true;
-    // IDs ya presentes en historial
+    // Agregar programas que no estaban cuando se confirmó
     var histIds = {};
     for (var i = 0; i < h.entries.length; i++) histIds[h.entries[i].programId] = true;
-    // Marcar como obsoletos los entries del historial cuyo programa ya no aplica hoy
-    for (var i = 0; i < events.length; i++) {
-      if (!currentIds[events[i].programId]) events[i]._obsoleto = true;
-    }
-    // Agregar programas que no estaban cuando se confirmó (nuevos)
-    var newProgs = currentProgs.filter(function(e) { return !histIds[e.programId]; });
+    var newProgs = getProjectedEntries(idx).filter(function(e) { return !histIds[e.programId]; });
     for (var i = 0; i < newProgs.length; i++) {
       newProgs[i].isNew = true;
       events.push(newProgs[i]);
@@ -2099,8 +2002,6 @@ function buildScheduleForDate(idx) {
 
   for (var i = 0; i < events.length; i++) {
     var ev = events[i];
-    // Entrada obsoleta: el programa fue modificado y ya no aplica a este día
-    if (ev._obsoleto) continue;
     var sectorN    = ev.sectorN;
     var sectorName = ev.sectorName;
     var programa   = ev.programa   || "";
@@ -2109,12 +2010,8 @@ function buildScheduleForDate(idx) {
     var zonasConMin= ev.zonas      || [];
     var notas      = ev.notas      || "";
     var ejecutado  = ev.ejecutado  !== false;
-    var esAnomalo  = ev.ejecutado  === "anomalo";
-    var esLluvia   = ev.ejecutado  === "lluvia";
     var color = ctrlColor(sectorN);
     if (!ejecutado) color = "#6b7280";
-    if (esAnomalo)  color = "#d97706";
-    if (esLluvia)   color = "#60a5fa";
 
     var endMin = startMin + durMin;
     var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
@@ -2128,13 +2025,11 @@ function buildScheduleForDate(idx) {
 
     var rowStyle = "";
     if (useHistory && !ejecutado) rowStyle = "opacity:0.5;";
-    if (useHistory && esAnomalo)  rowStyle = "opacity:0.85;";
-    if (useHistory && esLluvia)   rowStyle = "opacity:0.7;";
 
     html += '<div class="schedule-row" style="' + rowStyle + '">';
     html += '<div class="sr-top">';
     html += '<span class="time-tag">' + minToHHMM(startMin) + '</span>';
-    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '') + (useHistory && esLluvia ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido</span>' : '') + '</span>';
+    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + '</span>';
     html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
     html += '</div>';
 
@@ -2203,81 +2098,6 @@ function addPMRDay() {
   // (new days have no historical data, they show programs only)
 
   currentDateIdx = insertAt;
-  input.value = "";
-  buildPMR();
-  saveToStorage();
-}
-
-function addPMRWeek() {
-  var input = document.getElementById("new-day-input");
-  if (!input || !input.value) {
-    alert("Selecciona primero una fecha de referencia para agregar la semana completa.");
-    return;
-  }
-  var iso = input.value; // "2026-06-15"
-  // Find Monday of that week (ISO week: Mon=1 ... Sun=0)
-  var ref = new Date(iso + "T12:00:00");
-  var dow = ref.getDay(); // 0=Sun,1=Mon,...,6=Sat
-  var diffToMon = (dow === 0) ? -6 : 1 - dow;
-  var monday = new Date(ref);
-  monday.setDate(ref.getDate() + diffToMon);
-
-  var monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
-  var added = 0;
-  var lastIdx = -1;
-
-  for (var d = 0; d < 7; d++) {
-    var cur = new Date(monday);
-    cur.setDate(monday.getDate() + d);
-    var y  = cur.getFullYear();
-    var m  = cur.getMonth() + 1;
-    var dd = cur.getDate();
-    var dayLabel  = dayNames[cur.getDay()];
-    var monLabel  = monthNames[m];
-    var label = dayLabel + " " + dd + " " + monLabel;
-    var curISO = y + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
-
-    // Skip if already exists
-    var exists = false;
-    for (var i = 0; i < DATES.length; i++) {
-      if (DATES[i] === label) { exists = true; lastIdx = i; break; }
-    }
-    if (exists) continue;
-
-    // Insert in chronological order
-    var insertAt = DATES.length;
-    for (var i = 0; i < DATES.length; i++) {
-      var existISO = dateToISO(DATES[i]);
-      if (existISO > curISO) { insertAt = i; break; }
-    }
-    DATES.splice(insertAt, 0, label);
-    added++;
-    lastIdx = insertAt;
-    // Adjust lastIdx for subsequent inserts that shifted positions
-    // (re-search is handled by label matching above)
-  }
-
-  if (added === 0) {
-    // All days already present — just navigate to Monday
-    for (var i = 0; i < DATES.length; i++) {
-      var dayLabel = dayNames[monday.getDay()];
-      var monLabel = monthNames[monday.getMonth() + 1];
-      var monDayLabel = dayLabel + " " + monday.getDate() + " " + monLabel;
-      if (DATES[i] === monDayLabel) { lastIdx = i; break; }
-    }
-  }
-
-  // Navigate to Monday of the added week
-  var targetLabel = (function(){
-    var dayLabel = dayNames[monday.getDay()];
-    var monLabel = monthNames[monday.getMonth() + 1];
-    return dayLabel + " " + monday.getDate() + " " + monLabel;
-  })();
-  for (var i = 0; i < DATES.length; i++) {
-    if (DATES[i] === targetLabel) { currentDateIdx = i; break; }
-  }
-
   input.value = "";
   buildPMR();
   saveToStorage();
@@ -3923,211 +3743,6 @@ function showSyncBadge(msg) {
   syncTimer = setTimeout(function() { bc.style.display = "none"; }, 3000);
 }
 
-
-/* normaliza zonas desde PROGRAMS (zonasConMin) o HISTORY (entry.zonas) y ordena por id numérico */
-function getNormalizedZonas(ev) {
-  var raw = ev.zonas || ev.zonasConMin || [];
-  var result = [];
-  for (var zi = 0; zi < raw.length; zi++) {
-    var z = raw[zi];
-    result.push({
-      id:       z.id   !== undefined ? z.id   : (z.z !== undefined ? String(z.z) : String(zi+1)),
-      label:    z.label || z.desc || ("Z" + (z.id || z.z || (zi+1))),
-      min:      z.min   !== undefined ? z.min   : 0,
-      minReal:  z.minReal !== undefined ? z.minReal : (z.min || 0),
-      ejecutado: z.ejecutado !== undefined ? z.ejecutado : true,
-      nota:     z.nota  || ""
-    });
-  }
-  // Ordenar por id numérico
-  result.sort(function(a,b){ return parseInt(a.id,10) - parseInt(b.id,10); });
-  return result;
-}
-
-/* ==============================================
-   IMPRIMIR RANGO DE DÍAS
-============================================== */
-var prSelectedDays = new Set();
-
-function openPrintRangeModal() {
-  prSelectedDays = new Set();
-  // Pre-seleccionar el día actual
-  prSelectedDays.add(currentDateIdx);
-  buildPrintRangeDays();
-  var modal = document.getElementById("print-range-modal");
-  modal.style.display = "flex";
-}
-
-function closePrintRangeModal() {
-  document.getElementById("print-range-modal").style.display = "none";
-}
-
-function buildPrintRangeDays() {
-  var todayIdx = findTodayIndex();
-  var winStart = Math.max(0, todayIdx - 10);
-  var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
-  var html = "";
-  for (var i = winStart; i <= winEnd; i++) {
-    var sel = prSelectedDays.has(i);
-    var st = getDayStatus(DATES[i]);
-    var dot = st === "ejecutado" ? "✅ " : st === "cambios" ? "⚠️ " : st === "no-regado" ? "❌ " : st === "lluvia" ? "🌧 " : "";
-    var isToday = (i === findTodayIndex());
-    var todayMark = isToday ? ' style="outline:2px solid var(--green);outline-offset:2px;' : ' style="';
-    html += '<button onclick="prToggleDay(' + i + ')" ' + todayMark +
-      'padding:5px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.68rem;cursor:pointer;border:1px solid ' +
-      (sel ? 'var(--green);background:var(--green);color:#000;font-weight:700' : 'var(--border);background:var(--panel);color:var(--text)') +
-      '">' + dot + DATES[i] + '</button>';
-  }
-  document.getElementById("print-range-days").innerHTML = html;
-}
-
-function prToggleDay(idx) {
-  if (prSelectedDays.has(idx)) prSelectedDays.delete(idx);
-  else prSelectedDays.add(idx);
-  buildPrintRangeDays();
-}
-
-function prSelectRange(mode) {
-  var todayIdx = findTodayIndex();
-  prSelectedDays = new Set();
-  if (mode === "today") {
-    prSelectedDays.add(todayIdx);
-  } else if (mode === "tomorrow") {
-    if (todayIdx + 1 < DATES.length) prSelectedDays.add(todayIdx + 1);
-  } else if (mode === "week") {
-    // Lunes a domingo de la semana actual
-    var todayISO = dateToISO(DATES[todayIdx]);
-    var d = new Date(todayISO + "T12:00:00");
-    var dow = d.getDay(); // 0=dom
-    var diffToMon = dow === 0 ? -6 : 1 - dow;
-    var monDate = new Date(d); monDate.setDate(d.getDate() + diffToMon);
-    var sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
-    for (var i = 0; i < DATES.length; i++) {
-      var iso = dateToISO(DATES[i]);
-      if (iso >= monDate.toISOString().slice(0,10) && iso <= sunDate.toISOString().slice(0,10))
-        prSelectedDays.add(i);
-    }
-  } else if (mode === "next7") {
-    var todayISO = dateToISO(DATES[todayIdx]);
-    for (var i = 0; i < DATES.length; i++) {
-      var iso = dateToISO(DATES[i]);
-      if (iso >= todayISO) {
-        prSelectedDays.add(i);
-        if (prSelectedDays.size >= 7) break;
-      }
-    }
-  } else if (mode === "none") {
-    prSelectedDays = new Set();
-  }
-  buildPrintRangeDays();
-}
-
-/* ==============================================
-   HELPER: eventos reales para un índice de fecha
-   (usado por impresión para respetar historial)
-============================================== */
-function getEventsForDate(idx) {
-  var dateStr = DATES[idx];
-  var h = HISTORY[dateStr];
-  var useHist = h && h.status !== "sin-confirmar" && h.entries;
-  var events = [];
-  if (useHist) {
-    // IDs actualmente válidos para este día
-    var currentProgs = getProjectedEntries(idx);
-    var currentIds = {};
-    for (var ci = 0; ci < currentProgs.length; ci++) currentIds[currentProgs[ci].programId] = true;
-    // Copiar entries del historial, marcando obsoletos
-    for (var i = 0; i < h.entries.length; i++) {
-      var e = Object.assign({}, h.entries[i]);
-      e._obsoleto = !currentIds[e.programId];
-      events.push(e);
-    }
-    // Agregar programas nuevos no presentes en historial
-    var histIds = {};
-    for (var i = 0; i < h.entries.length; i++) histIds[h.entries[i].programId] = true;
-    var newP = currentProgs.filter(function(e){ return !histIds[e.programId]; });
-    for (var i = 0; i < newP.length; i++) { newP[i].isNew = true; events.push(newP[i]); }
-    // Filtrar obsoletos
-    events = events.filter(function(e){ return !e._obsoleto; });
-  } else {
-    for (var i = 0; i < PROGRAMS.length; i++) {
-      if (programRunsOnDate(PROGRAMS[i], idx)) events.push(PROGRAMS[i]);
-    }
-  }
-  events.sort(function(a,b){ return (a.start||0) - (b.start||0); });
-  return { events: events, useHist: !!useHist };
-}
-
-function printRangeReport() {
-  if (prSelectedDays.size === 0) { alert("Selecciona al menos un día."); return; }
-  var sortedIdxs = Array.from(prSelectedDays).sort(function(a,b){ return a - b; });
-  var html = "";
-
-  for (var di = 0; di < sortedIdxs.length; di++) {
-    var idx = sortedIdxs[di];
-    var dateStr = DATES[idx];
-    var evData = getEventsForDate(idx);
-    var events = evData.events;
-    var useHist = evData.useHist;
-
-    var st = getDayStatus(dateStr);
-    var stLabels = { "ejecutado":"✅ Ejecutado", "cambios":"⚠️ Con cambios", "no-regado":"❌ No regado", "lluvia":"🌧 Suspendido por lluvia", "sin-confirmar":"📋 Sin confirmar" };
-    var stColors = { "ejecutado":"#14532d", "cambios":"#78350f", "no-regado":"#7f1d1d", "lluvia":"#1e3a5f", "sin-confirmar":"#374151" };
-    var stBadge = '<span style="display:inline-block;background:' + (stColors[st]||"#374151") + ';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;margin-left:8px">' + (stLabels[st]||st) + '</span>';
-
-    if (di > 0) html += '<div style="border-top:3px solid #0a4f2e;margin:20px 0"></div>';
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">';
-    html += '<div><h2 style="border:none;padding:0;margin:0;font-size:15px;color:#0a4f2e">' + dateStr + stBadge + '</h2></div>';
-    html += '<div style="font-size:9px;color:#666">' + events.length + ' programa' + (events.length!==1?'s':'') + '</div>';
-    html += '</div>';
-
-    if (events.length === 0) {
-      html += '<p style="color:#999;font-size:10px;margin:8px 0 0">Sin riego programado.</p>';
-    } else {
-      html += '<table><thead><tr><th>Hora</th><th>Controlador · Prog.</th><th>Min.</th><th>Zonas</th><th>Estado</th></tr></thead><tbody>';
-      for (var i = 0; i < events.length; i++) {
-        var ev = events[i];
-        // Determine start/dur depending on source (program or history entry)
-        var startMin = ev.start || 0;
-        var durMin   = ev.durReal || ev.dur || 0;
-        var pgLabel  = ev.programa ? '<span class="prog-label pg-' + (ev.programa.charAt(0)||'a').toLowerCase() + '">' + ev.programa + '</span>' : '';
-        var zonaChips = '';
-        var zonas = getNormalizedZonas(ev);
-        for (var zi = 0; zi < zonas.length; zi++) {
-          var zz = zonas[zi];
-          var zEj = zz.ejecutado;
-          var zIcon = zEj === false ? "❌" : zEj === "anomalo" ? "⚠️" : zEj === "lluvia" ? "🌧" : "";
-          var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,22);
-          zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + zz.minReal + 'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">' + zLabel + '</span>' : '') + '</span>';
-        }
-        var evEj = ev.ejecutado;
-        var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
-          : evEj === "anomalo" ? '<span style="color:#d97706;font-size:9px">⚠️ Anómalo</span>'
-          : evEj === "lluvia"  ? '<span style="color:#3b82f6;font-size:9px">🌧 Suspendido</span>'
-          : useHist ? '<span style="color:#16a34a;font-size:9px">✅ OK</span>' : '<span style="color:#6b7280;font-size:9px">Proyección</span>';
-        html += '<tr>';
-        html += '<td><span class="time">' + minToHHMM(startMin) + '</span></td>';
-        html += '<td>' + pgLabel + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev.notas ? '<br><span style="color:#666;font-size:9px">' + ev.notas + '</span>' : '') + '</td>';
-        html += '<td><span class="dur">' + durMin + '</span></td>';
-        html += '<td>' + zonaChips + '</td>';
-        html += '<td>' + evStatus + '</td>';
-        html += '</tr>';
-      }
-      html += '</tbody></table>';
-    }
-  }
-
-  var rangeLabel = sortedIdxs.length === 1 ? DATES[sortedIdxs[0]]
-    : DATES[sortedIdxs[0]] + ' – ' + DATES[sortedIdxs[sortedIdxs.length-1]];
-  var fullHtml = '<div class="header"><div class="header-left"><h1>Informe de Riego</h1>';
-  fullHtml += '<p>Estadio Español · Departamento de Áreas Verdes</p></div>';
-  fullHtml += '<div class="header-right"><span class="badge">' + rangeLabel + '</span></div></div>';
-  fullHtml += html;
-
-  closePrintRangeModal();
-  buildPrintWindow("Riego " + rangeLabel, fullHtml);
-}
-
 /* ==============================================
    IMPRESION / PDF
 ============================================== */
@@ -4172,7 +3787,6 @@ function buildPrintWindow(title, bodyHtml) {
   w.document.write(bodyHtml);
   w.document.write('<div class="footer">PMR EE · Áreas Verdes · Estadio Español · Impreso el ' + new Date().toLocaleString('es-CL') + '</div>');
   w.document.write('<br><div style="text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#0a4f2e;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:8px">🖨 Imprimir</button><button onclick="window.print()" style="padding:8px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">💾 Guardar como PDF</button></div>');
-  w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
   w.document.write('</body></html>');
   w.document.close();
 }
@@ -4182,19 +3796,17 @@ function ctrlColorPrint(n) { return COLORS_PRINT[(n-1) % COLORS_PRINT.length]; }
 
 function printDayReport() {
   var dateStr = DATES[currentDateIdx];
-  var evData = getEventsForDate(currentDateIdx);
-  var events = evData.events;
-  var useHist = evData.useHist;
-
-  var st = getDayStatus(dateStr);
-  var stLabels = { "ejecutado":"✅ Ejecutado", "cambios":"⚠️ Con cambios", "no-regado":"❌ No regado", "lluvia":"🌧 Suspendido por lluvia", "sin-confirmar":"📋 Sin confirmar" };
-  var stColors = { "ejecutado":"#14532d", "cambios":"#78350f", "no-regado":"#7f1d1d", "lluvia":"#1e3a5f", "sin-confirmar":"#374151" };
-  var stBadge = stColors[st] ? ' <span style="background:' + stColors[st] + ';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px">' + (stLabels[st]||st) + '</span>' : '';
+  var events = [];
+  for (var i = 0; i < PROGRAMS.length; i++) {
+    var p = PROGRAMS[i];
+    if (programRunsOnDate(p, currentDateIdx)) events.push(p);
+  }
+  events.sort(function(a,b){ return a.start - b.start; });
 
   var html = '<div class="header">';
   html += '<div class="header-left"><h1>Informe de Riego Diario</h1>';
   html += '<p>Estadio Español · Departamento de Áreas Verdes</p></div>';
-  html += '<div class="header-right"><span class="badge">' + dateStr + '</span>' + stBadge + '<br><span style="font-size:9px">' + events.length + ' programa' + (events.length!==1?'s':'') + '</span></div>';
+  html += '<div class="header-right"><span class="badge">' + dateStr + '</span><br>' + events.length + ' programa' + (events.length!==1?'s':'') + ' activos</div>';
   html += '</div>';
 
   if (events.length === 0) {
@@ -4203,43 +3815,27 @@ function printDayReport() {
     html += '<table><thead><tr><th>Hora inicio</th><th>Controlador · Programa</th><th>Duración</th><th>Frecuencia</th><th>Zonas</th><th>Línea de tiempo</th></tr></thead><tbody>';
     for (var i = 0; i < events.length; i++) {
       var p = events[i];
-      var startMin = p.start || 0;
-      var durMin   = p.durReal || p.dur || 0;
-      var evEj     = p.ejecutado;
-      var color    = ctrlColorPrint(p.sectorN);
-      // Tint color for suspended/not-executed rows
-      var rowBg    = evEj === false ? 'background:#fff0f0' : evEj === 'lluvia' ? 'background:#eff6ff' : evEj === 'anomalo' ? 'background:#fffbeb' : '';
-      var endMin   = startMin + durMin;
-      var endStr   = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
-      var pgLabel  = p.programa ? '<span class="prog-label pg-' + (p.programa.charAt(0)||'a').toLowerCase() + '">' + p.programa + '</span>' : '';
-      // Status badge per entry
-      var entryStatus = '';
-      if (useHist) {
-        entryStatus = evEj === false        ? ' <span style="color:#dc2626;font-size:9px;font-weight:700">❌ No ejecutado</span>'
-                    : evEj === 'anomalo'    ? ' <span style="color:#d97706;font-size:9px;font-weight:700">⚠️ Anómalo</span>'
-                    : evEj === 'lluvia'     ? ' <span style="color:#2563eb;font-size:9px;font-weight:700">🌧 Suspendido</span>'
-                    : '<span style="color:#16a34a;font-size:9px">✅</span>';
-      }
+      var color = ctrlColorPrint(p.sectorN);
+      var endMin = p.start + p.dur;
+      var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
+      var pgLabel = p.programa ? '<span class="prog-label pg-' + p.programa.charAt(0).toLowerCase() + '">' + p.programa + '</span>' : '';
       var zonaChips = '';
-      var zonas = getNormalizedZonas(p);
-      for (var zi = 0; zi < zonas.length; zi++) {
-        var zz = zonas[zi];
-        var zEj  = zz.ejecutado;
-        var zIcon = zEj === false ? '❌' : zEj === 'anomalo' ? '⚠️' : zEj === 'lluvia' ? '🌧' : '';
-        var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,22);
-        zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + ' ' : '') + '<span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zz.minReal+'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">'+zLabel+'</span>' : '') + '</span>';
+      if (p.zonasConMin && p.zonasConMin.length > 0) {
+        for (var zi = 0; zi < p.zonasConMin.length; zi++) {
+          var zz = p.zonasConMin[zi];
+          zonaChips += '<span class="zona-chip"><span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zz.min+'min</span></span>';
+        }
       }
       // Bar
-      var leftPct  = (startMin/1440*100).toFixed(1);
-      var widthPct = Math.max(durMin/1440*100, 0.5).toFixed(1);
-      var barColor = evEj === false ? '#dc2626' : evEj === 'lluvia' ? '#3b82f6' : evEj === 'anomalo' ? '#d97706' : color;
-      var barHtml  = '<div class="bar-wrap"><div class="bar-seg" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+barColor+'"></div></div>';
-      barHtml += '<span style="font-size:9px;color:#666;font-family:monospace">'+minToHHMM(startMin)+'–'+endStr+'</span>';
-      html += '<tr style="'+rowBg+'">';
-      html += '<td><span class="time">'+minToHHMM(startMin)+'</span></td>';
-      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+entryStatus+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
-      html += '<td><span class="dur">'+durMin+' min</span></td>';
-      html += '<td style="font-family:monospace;font-size:9px">'+(p.days ? buildDaysLabel(p) : '—')+'</td>';
+      var leftPct = (p.start/1440*100).toFixed(1);
+      var widthPct = Math.max(p.dur/1440*100, 0.5).toFixed(1);
+      var barHtml = '<div class="bar-wrap"><div class="bar-seg" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+color+'"></div></div>';
+      barHtml += '<span style="font-size:9px;color:#666;font-family:monospace">'+minToHHMM(p.start)+'–'+endStr+'</span>';
+      html += '<tr>';
+      html += '<td><span class="time">'+minToHHMM(p.start)+'</span></td>';
+      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+(p.notes?'<br><span style="color:#666;font-size:9px">'+p.notes+'</span>':'')+'</td>';
+      html += '<td><span class="dur">'+p.dur+' min</span></td>';
+      html += '<td style="font-family:monospace;font-size:9px">'+buildDaysLabel(p)+'</td>';
       html += '<td>'+zonaChips+'</td>';
       html += '<td>'+barHtml+'</td>';
       html += '</tr>';
@@ -4252,7 +3848,7 @@ function printDayReport() {
     for (var i = 0; i < events.length; i++) {
       var p = events[i];
       if (!byCtrl[p.sectorN]) byCtrl[p.sectorN] = { name: p.sectorName, totalMin: 0, progs: [] };
-      byCtrl[p.sectorN].totalMin += (p.durReal || p.dur || 0);
+      byCtrl[p.sectorN].totalMin += p.dur;
       byCtrl[p.sectorN].progs.push(p);
     }
     html += '<table><thead><tr><th>N°</th><th>Controlador</th><th>Programas</th><th>Min. total</th></tr></thead><tbody>';
@@ -4270,14 +3866,9 @@ function printDayReport() {
   buildPrintWindow('Riego ' + dateStr, html);
 }
 
-/* ==============================================
-   IMPRIMIR SELECCIÓN DE CONTROLADORES
-============================================== */
-var ctrlPrintSelected = new Set();
-
-function getVisibleControllers() {
-  var search = (document.getElementById("ctrl-search") ? document.getElementById("ctrl-search").value : "").toLowerCase();
-  var result = [];
+function printControllersReport() {
+  var search = document.getElementById("ctrl-search") ? document.getElementById("ctrl-search").value.toLowerCase() : "";
+  var filtered = [];
   for (var ci = 0; ci < CONTROLLERS.length; ci++) {
     var c = CONTROLLERS[ci];
     if (ctrlCanalFilter !== "all" && c.canal !== ctrlCanalFilter) continue;
@@ -4286,89 +3877,12 @@ function getVisibleControllers() {
       if (!match) { for (var zi = 0; zi < c.zonas.length; zi++) { if (c.zonas[zi].desc.toLowerCase().indexOf(search) >= 0) { match = true; break; } } }
       if (!match) continue;
     }
-    result.push(c);
+    filtered.push(c);
   }
-  result.sort(function(a,b){ return a.n - b.n; });
-  return result;
-}
+  filtered.sort(function(a,b){ return a.n - b.n; });
 
-function openCtrlPrintModal() {
-  ctrlPrintSelected = new Set();
-  // Pre-seleccionar los visibles
-  var visible = getVisibleControllers();
-  for (var i = 0; i < visible.length; i++) ctrlPrintSelected.add(visible[i].n);
-  buildCtrlPrintList();
-  document.getElementById("ctrl-print-modal").style.display = "flex";
-}
-
-function closeCtrlPrintModal() {
-  document.getElementById("ctrl-print-modal").style.display = "none";
-}
-
-function buildCtrlPrintList() {
-  var sorted = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
-  var html = "";
-  for (var i = 0; i < sorted.length; i++) {
-    var c = sorted[i];
-    var sel = ctrlPrintSelected.has(c.n);
-    var zonaList = c.zonas.map(function(z){ return "Z"+z.z+" "+z.desc; }).join(" · ").slice(0,60);
-    html += '<div onclick="ctrlPrintToggle(' + c.n + ')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;border:1px solid ' + (sel ? "var(--green)" : "var(--border)") + ';background:' + (sel ? "var(--green-dim)" : "var(--panel)") + '">';
-    html += '<div style="width:18px;height:18px;border-radius:4px;border:2px solid ' + (sel ? "var(--green)" : "var(--border)") + ';background:' + (sel ? "var(--green)" : "transparent") + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
-    html += sel ? '<span style="color:#000;font-size:11px;font-weight:900;line-height:1">✓</span>' : "";
-    html += "</div>";
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:' + (sel ? "var(--green)" : "var(--text)") + '">N°' + c.n + " · " + c.name + "</div>";
-    html += '<div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + zonaList + (c.zonas.length > 3 ? "…" : "") + "</div>";
-    html += "</div>";
-    if (c.canal) html += '<div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);flex-shrink:0">Ch.' + c.canal + "</div>";
-    html += "</div>";
-  }
-  document.getElementById("ctrl-print-list").innerHTML = html;
-  var n = ctrlPrintSelected.size;
-  document.getElementById("ctrl-print-count").textContent = n === 0 ? "Ninguno seleccionado" : n + " seleccionado" + (n !== 1 ? "s" : "");
-}
-
-function ctrlPrintToggle(n) {
-  if (ctrlPrintSelected.has(n)) ctrlPrintSelected.delete(n);
-  else ctrlPrintSelected.add(n);
-  buildCtrlPrintList();
-}
-
-function ctrlPrintSelectAll() {
-  for (var i = 0; i < CONTROLLERS.length; i++) ctrlPrintSelected.add(CONTROLLERS[i].n);
-  buildCtrlPrintList();
-}
-
-function ctrlPrintSelectNone() {
-  ctrlPrintSelected = new Set();
-  buildCtrlPrintList();
-}
-
-function ctrlPrintSelectVisible() {
-  ctrlPrintSelected = new Set();
-  var visible = getVisibleControllers();
-  for (var i = 0; i < visible.length; i++) ctrlPrintSelected.add(visible[i].n);
-  buildCtrlPrintList();
-}
-
-function printSelectedControllers() {
-  if (ctrlPrintSelected.size === 0) { alert("Selecciona al menos un controlador."); return; }
-  var toprint = CONTROLLERS.filter(function(c){ return ctrlPrintSelected.has(c.n); });
-  toprint.sort(function(a,b){ return a.n - b.n; });
-  closeCtrlPrintModal();
-  // Reuse printControllersReport logic but with custom filtered list
-  _doPrintControllers(toprint, toprint.length + " controlador" + (toprint.length !== 1 ? "es" : "") + " seleccionado" + (toprint.length !== 1 ? "s" : ""));
-}
-
-function printControllersReport() {
-  var filtered = getVisibleControllers();
-  var search = (document.getElementById("ctrl-search") ? document.getElementById("ctrl-search").value : "").trim();
   var subtitle = search ? 'Búsqueda: "' + search + '"' : (ctrlCanalFilter !== "all" ? "Canal: " + ctrlCanalFilter : "Todos los controladores");
 
-  _doPrintControllers(filtered, subtitle);
-}
-
-function _doPrintControllers(filtered, subtitle) {
   var html = '<div class="header">';
   html += '<div class="header-left"><h1>Informe de Controladores y Zonas</h1>';
   html += '<p>Estadio Español · Departamento de Áreas Verdes · ' + subtitle + '</p></div>';
@@ -4508,50 +4022,5 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 </script>
-
-<!-- ====== MODAL: Seleccionar controladores para imprimir ====== -->
-<div id="ctrl-print-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
-  <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(520px,95vw);max-height:88vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:var(--green)">☑ Seleccionar controladores</div>
-      <button onclick="closeCtrlPrintModal()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:2px 6px">✕</button>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-      <button onclick="ctrlPrintSelectAll()" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Todos</button>
-      <button onclick="ctrlPrintSelectNone()" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);cursor:pointer">Ninguno</button>
-      <button onclick="ctrlPrintSelectVisible()" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Vista actual</button>
-      <span id="ctrl-print-count" style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;margin-left:4px"></span>
-    </div>
-    <div id="ctrl-print-list" style="overflow-y:auto;flex:1;max-height:52vh;display:flex;flex-direction:column;gap:4px;padding-right:4px;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">
-      <button onclick="closeCtrlPrintModal()" style="padding:7px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);cursor:pointer">Cancelar</button>
-      <button onclick="printSelectedControllers()" style="padding:7px 16px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">🖨 Imprimir selección</button>
-    </div>
-  </div>
-</div>
-
-<!-- ====== MODAL: Imprimir rango de días ====== -->
-<div id="print-range-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
-  <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(480px,95vw);max-height:85vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:var(--green)">📅 Imprimir varios días</div>
-      <button onclick="closePrintRangeModal()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:2px 6px">✕</button>
-    </div>
-    <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);margin-bottom:12px">Selecciona los días a incluir en el informe</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <button onclick="prSelectRange('today')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Hoy</button>
-      <button onclick="prSelectRange('tomorrow')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Mañana</button>
-      <button onclick="prSelectRange('week')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Esta semana</button>
-      <button onclick="prSelectRange('next7')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--text);cursor:pointer">Próx. 7 días</button>
-      <button onclick="prSelectRange('none')" style="padding:4px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);cursor:pointer">Limpiar</button>
-    </div>
-    <div id="print-range-days" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;max-height:220px;overflow-y:auto;padding:4px 0"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">
-      <button onclick="closePrintRangeModal()" style="padding:7px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);cursor:pointer">Cancelar</button>
-      <button onclick="printRangeReport()" style="padding:7px 16px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">🖨 Imprimir selección</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
