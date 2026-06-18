@@ -4166,13 +4166,31 @@ function printRangeReport() {
     if (events.length === 0) {
       html += '<p style="color:#999;font-size:10px;margin:8px 0 0">Sin riego programado.</p>';
     } else {
-      html += '<table><thead><tr><th>Hora</th><th>Controlador · Prog.</th><th>Min.</th><th>Zonas</th><th>Estado</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Hora</th><th>Controlador · Prog.</th><th>Min.</th><th>Frecuencia</th><th>Estado</th><th>Zonas</th></tr></thead><tbody>';
       for (var i = 0; i < events.length; i++) {
         var ev = events[i];
         // Determine start/dur depending on source (program or history entry)
         var startMin = ev.start || 0;
         var durMin   = ev.durReal || ev.dur || 0;
         var pgLabel  = ev.programa ? '<span class="prog-label pg-' + (ev.programa.charAt(0)||'a').toLowerCase() + '">' + ev.programa + '</span>' : '';
+
+        // Frecuencia: buscar en PROGRAMS si no está en el evento (historial)
+        var freqSrc = ev;
+        if (!ev.freqMode && ev.programId) {
+          for (var fi = 0; fi < PROGRAMS.length; fi++) {
+            if (PROGRAMS[fi].id === ev.programId) { freqSrc = PROGRAMS[fi]; break; }
+          }
+        }
+        if (!freqSrc.freqMode && ev.sectorN && ev.programa) {
+          for (var fi = 0; fi < PROGRAMS.length; fi++) {
+            if (PROGRAMS[fi].sectorN === ev.sectorN && PROGRAMS[fi].programa === ev.programa) { freqSrc = PROGRAMS[fi]; break; }
+          }
+        }
+        var freqLbl = '—';
+        if (freqSrc.freqMode === 'dias' && freqSrc.days && freqSrc.days.length) freqLbl = freqSrc.days.join('-');
+        else if (freqSrc.freqMode === 'intervalo' && freqSrc.interval) freqLbl = 'Cada ' + freqSrc.interval + ' día' + (freqSrc.interval > 1 ? 's' : '');
+        else if (freqSrc.freqMode === 'manual') freqLbl = 'Manual';
+
         var zonaChips = '';
         var zonas = getNormalizedZonas(ev);
         for (var zi = 0; zi < zonas.length; zi++) {
@@ -4183,16 +4201,22 @@ function printRangeReport() {
           zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + zz.minReal + 'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">' + zLabel + '</span>' : '') + '</span>';
         }
         var evEj = ev.ejecutado;
-        var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
-          : evEj === "anomalo" ? '<span style="color:#d97706;font-size:9px">⚠️ Anómalo</span>'
-          : evEj === "lluvia"  ? '<span style="color:#3b82f6;font-size:9px">🌧 Suspendido</span>'
-          : useHist ? '<span style="color:#16a34a;font-size:9px">✅ OK</span>' : '<span style="color:#6b7280;font-size:9px">Proyección</span>';
+        var evStatus = evEj === false
+          ? '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>'
+          : evEj === "anomalo"
+          ? '<span style="display:inline-block;background:#78350f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ Anómalo</span>'
+          : evEj === "lluvia"
+          ? '<span style="display:inline-block;background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">🌧 Suspendido</span>'
+          : useHist
+          ? '<span style="display:inline-block;background:#14532d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">✅ Ejecutado</span>'
+          : '<span style="display:inline-block;background:#374151;color:#d1d5db;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap">📋 Proyectado</span>';
         html += '<tr>';
         html += '<td><span class="time">' + minToHHMM(startMin) + '</span></td>';
-        html += '<td>' + pgLabel + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev.notas ? '<br><span style="color:#666;font-size:9px">' + ev.notas + '</span>' : '') + '</td>';
+        html += '<td>' + pgLabel + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev.notas||ev.notes ? '<br><span style="color:#666;font-size:9px">' + (ev.notas||ev.notes) + '</span>' : '') + '</td>';
         html += '<td><span class="dur">' + durMin + '</span></td>';
-        html += '<td>' + zonaChips + '</td>';
+        html += '<td style="font-family:monospace;font-size:9px">' + freqLbl + '</td>';
         html += '<td>' + evStatus + '</td>';
+        html += '<td>' + zonaChips + '</td>';
         html += '</tr>';
       }
       html += '</tbody></table>';
@@ -4282,7 +4306,7 @@ function printDayReport() {
   if (events.length === 0) {
     html += '<p style="color:#999;text-align:center;padding:20px">Sin riego programado para este día.</p>';
   } else {
-    html += '<table><thead><tr><th>Hora inicio</th><th>Controlador · Programa</th><th>Duración</th><th>Frecuencia</th><th>Zonas</th><th>Línea de tiempo</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>Hora inicio</th><th>Controlador · Programa</th><th>Duración</th><th>Frecuencia</th><th>Estado</th><th>Zonas</th><th>Línea de tiempo</th></tr></thead><tbody>';
     for (var i = 0; i < events.length; i++) {
       var p = events[i];
       var startMin = p.start || 0;
@@ -4294,14 +4318,40 @@ function printDayReport() {
       var endMin   = startMin + durMin;
       var endStr   = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
       var pgLabel  = p.programa ? '<span class="prog-label pg-' + (p.programa.charAt(0)||'a').toLowerCase() + '">' + p.programa + '</span>' : '';
-      // Status badge per entry
-      var entryStatus = '';
-      if (useHist) {
-        entryStatus = evEj === false        ? ' <span style="color:#dc2626;font-size:9px;font-weight:700">❌ No ejecutado</span>'
-                    : evEj === 'anomalo'    ? ' <span style="color:#d97706;font-size:9px;font-weight:700">⚠️ Anómalo</span>'
-                    : evEj === 'lluvia'     ? ' <span style="color:#2563eb;font-size:9px;font-weight:700">🌧 Suspendido</span>'
-                    : '<span style="color:#16a34a;font-size:9px">✅</span>';
+
+      // --- Frecuencia: si el evento viene del historial puede no tener freqMode,
+      //     buscar el programa original por programId o por coincidencia de sectorN+programa
+      var freqSrc = p;
+      if (!p.freqMode && p.programId) {
+        for (var fi = 0; fi < PROGRAMS.length; fi++) {
+          if (PROGRAMS[fi].id === p.programId) { freqSrc = PROGRAMS[fi]; break; }
+        }
       }
+      if (!freqSrc.freqMode && p.sectorN && p.programa) {
+        for (var fi = 0; fi < PROGRAMS.length; fi++) {
+          if (PROGRAMS[fi].sectorN === p.sectorN && PROGRAMS[fi].programa === p.programa) { freqSrc = PROGRAMS[fi]; break; }
+        }
+      }
+      var freqLabel = '—';
+      if (freqSrc.freqMode === 'dias' && freqSrc.days && freqSrc.days.length) {
+        freqLabel = freqSrc.days.join('-');
+      } else if (freqSrc.freqMode === 'intervalo' && freqSrc.interval) {
+        freqLabel = 'Cada ' + freqSrc.interval + ' día' + (freqSrc.interval > 1 ? 's' : '');
+      } else if (freqSrc.freqMode === 'manual') {
+        freqLabel = 'Manual';
+      }
+
+      // --- Estado: columna separada con badge de color
+      var statusCell = '';
+      if (useHist) {
+        if (evEj === false)         statusCell = '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>';
+        else if (evEj === 'anomalo') statusCell = '<span style="display:inline-block;background:#78350f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ Anómalo</span>';
+        else if (evEj === 'lluvia')  statusCell = '<span style="display:inline-block;background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">🌧 Suspendido</span>';
+        else                         statusCell = '<span style="display:inline-block;background:#14532d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">✅ Ejecutado</span>';
+      } else {
+        statusCell = '<span style="display:inline-block;background:#374151;color:#d1d5db;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap">📋 Proyectado</span>';
+      }
+
       var zonaChips = '';
       var zonas = getNormalizedZonas(p);
       for (var zi = 0; zi < zonas.length; zi++) {
@@ -4319,9 +4369,10 @@ function printDayReport() {
       barHtml += '<span style="font-size:9px;color:#666;font-family:monospace">'+minToHHMM(startMin)+'–'+endStr+'</span>';
       html += '<tr style="'+rowBg+'">';
       html += '<td><span class="time">'+minToHHMM(startMin)+'</span></td>';
-      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+entryStatus+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
+      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
       html += '<td><span class="dur">'+durMin+' min</span></td>';
-      html += '<td style="font-family:monospace;font-size:9px">'+(p.days ? buildDaysLabel(p) : '—')+'</td>';
+      html += '<td style="font-family:monospace;font-size:9px">'+freqLabel+'</td>';
+      html += '<td>'+statusCell+'</td>';
       html += '<td>'+zonaChips+'</td>';
       html += '<td>'+barHtml+'</td>';
       html += '</tr>';
