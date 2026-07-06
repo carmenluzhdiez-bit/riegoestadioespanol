@@ -439,19 +439,104 @@
     border: 1px solid var(--border);
     border-radius: 14px; overflow: hidden;
   }
-  .prog-row {
-    display: grid;
-    grid-template-columns: 1fr 80px 80px 90px 36px;
-    padding: 10px 16px; border-bottom: 1px solid var(--border);
-    font-size: 0.8rem; align-items: center; gap: 8px;
+  /* ── PROG CARDS ── */
+  .prog-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color .15s;
   }
-  .prog-row.header {
+  .prog-card:hover { border-color: var(--green); }
+  .prog-card.editing { border-color: var(--green); background: var(--green-dim); }
+  .prog-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .prog-card-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 5px;
+    flex-shrink: 0;
+  }
+  .prog-card-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .prog-card-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .prog-card-sub {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .prog-card-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .prog-card-body {
+    display: none;
+    padding: 10px 12px 12px;
+    border-top: 1px solid var(--border);
     background: var(--panel2);
-    font-size: 0.65rem; font-family: var(--font-mono);
-    color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
   }
-  .prog-row:last-child { border-bottom: none; }
-  .prog-row:not(.header):hover { background: var(--green-glow); }
+  .prog-card-body.open { display: block; }
+  .prog-card-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .prog-card-detail-label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 3px;
+  }
+  .prog-card-detail-val {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .prog-zona-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+  }
+  .prog-zona-chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .prog-zona-chip .zn { color: var(--blue); font-weight: 700; }
+  .prog-zona-chip .zm { color: var(--green); font-weight: 700; }
+  /* keep del/edit btn styles */
   .del-btn {
     background: none; border: 1px solid #dc262640;
     color: var(--red); width: 28px; height: 28px;
@@ -511,8 +596,7 @@
   }
   .quick-days button:hover { border-color: var(--green); color: var(--green); }
   .freq-panel { margin-bottom: 4px; }
-  .prog-row { grid-template-columns: 1fr 75px 75px 1fr 90px 36px; }
-  .prog-row.header { grid-template-columns: 1fr 75px 75px 1fr 90px 36px; }
+
 
   /* ── CONTROLADORES ────────────────────────────────── */
   .ctrl-card {
@@ -717,12 +801,17 @@
   <button class="tab" data-tab="conflictos" id="tab-conflictos" onclick="showTab('conflictos')">⚠️ Conflictos</button>
   <button class="tab only-editor" data-tab="editor" onclick="showTab('editor')">✏️ Programar</button>
   <button class="tab" data-tab="controladores" onclick="showTab('controladores')">🗂️ Controladores</button>
+  <button class="tab" data-tab="reportes" onclick="showTab('reportes')">📊 Reportes</button>
+  <button class="tab" data-tab="clima" onclick="showTab('clima')">🌡️ Clima</button>
   <button class="tab only-admin" data-tab="config" onclick="showTab('config')">⚙️ Config.</button>
 </div>
 
 <main>
 
 <!-- ════════════ PANE: PMR ════════════ -->
+<!-- BANNER ALERTAS CLIMA -->
+<div id="clima-alert-banner" style="display:none;margin:0 0 10px 0;border-radius:10px;padding:10px 16px;font-family:var(--font-mono);font-size:0.78rem;font-weight:700;cursor:pointer" onclick="showTab('clima')"></div>
+
 <div class="pane active" id="pane-pmr">
   <div class="stats-row" id="pmr-stats"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
@@ -755,6 +844,7 @@
     <div style="display:flex;gap:6px">
       <button onclick="printDayReport()" style="padding:7px 14px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">🖨 Este día</button>
       <button onclick="openPrintRangeModal()" style="padding:7px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;white-space:nowrap">📅 Varios días</button>
+      <button onclick="openRiegoExtraModal()" class="only-editor" style="padding:7px 14px;background:rgba(96,165,250,0.25);border:1px solid rgba(96,165,250,0.5);border-radius:8px;color:#93c5fd;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">➕ Riego extra</button>
     </div>
   </div>
   <!-- Panel de confirmación (solo admin) -->
@@ -764,6 +854,18 @@
   <div class="schedule-wrap">
     <div class="schedule-header">Programas del día — barra proporcional a 24 horas</div>
     <div id="schedule-body"></div>
+  </div>
+
+  <!-- Panel tareas jardinero (manguera) -->
+  <div class="only-editor" style="margin-top:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div class="section-title" style="margin:0">🪣 Tareas riego manual jardinero <span id="tareas-badge" style="display:none;background:var(--amber);color:#000;font-family:var(--font-mono);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px"></span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="tareas-sync-label" style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted)"></span>
+        <button onclick="loadTareasJardinero(buildTareasPanel)" style="padding:4px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🔄</button>
+      </div>
+    </div>
+    <div id="tareas-jardinero-panel"></div>
   </div>
 </div>
 
@@ -919,9 +1021,6 @@
       style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem;width:220px;outline:none">
   </div>
   <div class="programs-table">
-    <div class="prog-row header">
-      <span>Controlador · Programa</span><span>Zonas</span><span>Inicio · Duración</span><span>Frecuencia</span><span>Estado</span><span></span>
-    </div>
     <div id="prog-list"></div>
   </div>
 </div>
@@ -948,6 +1047,13 @@
 <div class="pane" id="pane-config">
   <div class="stats-row" id="cfg-stats"></div>
 
+  <!-- PLANTILLAS DE RIEGO EXTRA -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;margin-top:8px">
+    <div class="section-title" style="margin:0">💾 Plantillas de riego extra</div>
+  </div>
+  <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);margin-bottom:12px">Configuraciones guardadas que puedes aplicar con un clic al crear un riego extra.</div>
+  <div id="cfg-plantillas-list" style="margin-bottom:28px"></div>
+
   <!-- GRUPOS DE BOMBA -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
     <div class="section-title" style="margin:0">Grupos de bomba compartida</div>
@@ -962,6 +1068,120 @@
   </div>
   <div id="cfg-ctrl-list"></div>
 </div>
+
+<!-- ════════════ PANE: REPORTES ════════════ -->
+<div class="pane" id="pane-reportes">
+  <div class="stats-row" id="rep-stats"></div>
+
+  <!-- Selector de período -->
+  <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div class="field" style="margin:0">
+        <label>Período</label>
+        <div style="display:flex;gap:5px">
+          <button class="rep-periodo-btn active" data-p="dia"     onclick="repSetPeriodo('dia',this)"     style="padding:6px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;background:var(--green);color:#000;border:2px solid var(--green)">Día</button>
+          <button class="rep-periodo-btn"         data-p="semana" onclick="repSetPeriodo('semana',this)"  style="padding:6px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;background:var(--panel);color:var(--muted);border:2px solid var(--border)">Semana</button>
+          <button class="rep-periodo-btn"         data-p="mes"    onclick="repSetPeriodo('mes',this)"     style="padding:6px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;background:var(--panel);color:var(--muted);border:2px solid var(--border)">Mes</button>
+          <button class="rep-periodo-btn"         data-p="anio"   onclick="repSetPeriodo('anio',this)"    style="padding:6px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;background:var(--panel);color:var(--muted);border:2px solid var(--border)">Año</button>
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Fecha de referencia</label>
+        <input type="date" id="rep-fecha" onchange="buildReportes()"
+          style="padding:6px 10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.78rem">
+      </div>
+      <button onclick="repImprimir()" style="padding:8px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem;cursor:pointer;margin-bottom:2px">🖨 Imprimir reporte</button>
+    </div>
+    <div id="rep-rango-label" style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);margin-top:8px"></div>
+  </div>
+
+  <!-- Resumen rápido días del período -->
+  <div id="rep-dias-summary" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px"></div>
+
+  <!-- Tabla por controlador -->
+  <div id="rep-body"></div>
+</div>
+
+
+<!-- ════════════ PANE: CLIMA ════════════ -->
+<div class="pane" id="pane-clima">
+
+  <!-- Alertas activas -->
+  <div id="clima-alerts-panel" style="margin-bottom:14px"></div>
+
+  <!-- Clima actual -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🌡️ Temperatura actual</div>
+      <div id="clima-temp-now" style="font-size:2rem;font-weight:700;color:var(--text)">—</div>
+      <div id="clima-feels" style="font-size:0.72rem;font-family:var(--font-mono);color:var(--muted);margin-top:2px"></div>
+      <div id="clima-condition" style="font-size:0.78rem;margin-top:4px;color:var(--text)"></div>
+    </div>
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">💧 Precipitaciones</div>
+      <div id="clima-precip-now" style="font-size:2rem;font-weight:700;color:#3b82f6">—</div>
+      <div style="font-size:0.72rem;font-family:var(--font-mono);color:var(--muted);margin-top:2px">mm última hora</div>
+      <div id="clima-humidity" style="font-size:0.78rem;margin-top:4px;color:var(--text)"></div>
+    </div>
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">📅 Mín / Máx hoy</div>
+      <div id="clima-minmax" style="font-size:1.4rem;font-weight:700;color:var(--text)">—</div>
+      <div id="clima-wind" style="font-size:0.78rem;font-family:var(--font-mono);color:var(--muted);margin-top:4px"></div>
+    </div>
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🌅 Amanecer</div>
+      <div id="clima-sun" style="font-size:1.1rem;font-weight:700;color:var(--text)">—</div>
+      <div id="clima-updated" style="font-size:0.68rem;font-family:var(--font-mono);color:var(--muted);margin-top:6px"></div>
+    </div>
+  </div>
+
+  <!-- Pronóstico 7 días -->
+  <div class="section-title" style="margin-bottom:10px">Pronóstico 7 días</div>
+  <div id="clima-forecast" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:20px"></div>
+
+  <!-- Pronóstico horario hoy -->
+  <div class="section-title" style="margin-bottom:10px">Temperatura hoy por hora</div>
+  <div id="clima-hourly" style="overflow-x:auto;padding-bottom:8px;margin-bottom:20px">
+    <div id="clima-hourly-inner" style="display:flex;gap:6px;min-width:max-content"></div>
+  </div>
+
+  <!-- Configuración de alertas -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    <div class="section-title" style="margin:0">⚙️ Umbrales de alerta</div>
+    <button onclick="climaSaveThresholds()" style="padding:6px 14px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">Guardar umbrales</button>
+  </div>
+  <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="field">
+      <label>❄️ Umbral helada (°C) — alertar si temp ≤</label>
+      <input type="number" id="clima-thresh-frost" value="3" step="0.5" style="width:100px;font-size:1rem;font-weight:700">
+      <div style="font-size:0.68rem;font-family:var(--font-mono);color:var(--muted);margin-top:4px">Alerta aparece cuando T° mínima pronosticada ≤ este valor</div>
+    </div>
+    <div class="field">
+      <label>🔥 Umbral calor extremo (°C) — alertar si temp ≥</label>
+      <input type="number" id="clima-thresh-heat" value="32" step="0.5" style="width:100px;font-size:1rem;font-weight:700">
+      <div style="font-size:0.68rem;font-family:var(--font-mono);color:var(--muted);margin-top:4px">Alerta aparece cuando T° máxima pronosticada ≥ este valor</div>
+    </div>
+  </div>
+
+  <!-- WhatsApp alerta para jefa -->
+  <div id="clima-wsp-section" style="display:none">
+    <div class="section-title" style="margin-bottom:10px">📲 Alerta para Jefa de Áreas Verdes</div>
+    <div style="background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:8px">
+      <div style="font-size:0.68rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:8px">Mensaje pre-redactado para enviar a la Jefa de Áreas Verdes. Edita si necesitas ajustar.</div>
+      <textarea id="clima-wsp-text" rows="6" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--font-mono);font-size:0.78rem;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="climaSendWsp()" style="padding:8px 18px;background:#25D366;color:#fff;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.78rem;font-weight:700;cursor:pointer">📲 Abrir en WhatsApp</button>
+        <button onclick="climaCopyWsp()" style="padding:8px 18px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:var(--font-mono);font-size:0.78rem;cursor:pointer">📋 Copiar mensaje</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón actualizar -->
+  <div style="text-align:center;margin-top:8px">
+    <button onclick="climaFetch()" style="padding:8px 20px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--font-mono);font-size:0.72rem;cursor:pointer">🔄 Actualizar datos</button>
+  </div>
+</div>
+
 
 <!-- MODAL GRUPOS DE BOMBA -->
 <div id="bomba-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;overflow-y:auto;padding:20px">
@@ -1069,6 +1289,159 @@
     </div>
   </div>
 </div>
+
+
+<!-- ════════════ MODAL: RIEGO EXTRA ════════════ -->
+<div id="riego-extra-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:2000;overflow-y:auto;padding:16px">
+  <div style="max-width:520px;margin:0 auto;background:var(--panel);border:1px solid #3b82f6;border-radius:16px;overflow:hidden">
+    <!-- Header -->
+    <div style="padding:14px 18px;background:#1e3a5f;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div id="rex-modal-title" style="font-weight:700;font-size:1rem;color:#93c5fd">➕ Riego Extra</div>
+        <div id="rex-modal-date" style="font-family:var(--font-mono);font-size:0.68rem;color:#60a5fa;margin-top:2px"></div>
+      </div>
+      <button onclick="closeRiegoExtraModal()" style="background:none;border:none;color:#60a5fa;font-size:1.3rem;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+
+      <!-- Aplicar plantilla -->
+      <div class="field" id="rex-plantilla-section">
+        <label>Plantilla guardada <span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted)">(opcional — precarga todos los campos)</span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="rex-plantilla-sel"
+            style="flex:1;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.78rem">
+            <option value="">— Sin plantilla —</option>
+          </select>
+          <button onclick="rexAplicarPlantilla()" style="padding:8px 14px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">Aplicar</button>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:2px 0 4px"></div>
+
+      <!-- Motivo -->
+      <div class="field">
+        <label>Motivo del riego extra</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="rex-motivo-btns">
+          <button class="rex-motivo-btn active" data-motivo="helada" onclick="rexSetMotivo('helada',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer;background:#1e3a5f;color:#93c5fd;border:2px solid #3b82f6">❄️ Helada</button>
+          <button class="rex-motivo-btn" data-motivo="calor" onclick="rexSetMotivo('calor',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer;background:var(--panel2);color:var(--muted);border:2px solid var(--border)">🔥 Calor extremo</button>
+          <button class="rex-motivo-btn" data-motivo="reparacion" onclick="rexSetMotivo('reparacion',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer;background:var(--panel2);color:var(--muted);border:2px solid var(--border)">🔧 Sistema en reparación</button>
+          <button class="rex-motivo-btn" data-motivo="evento" onclick="rexSetMotivo('evento',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer;background:var(--panel2);color:var(--muted);border:2px solid var(--border)">⛔ Evento / cancha ocupada</button>
+          <button class="rex-motivo-btn" data-motivo="otro" onclick="rexSetMotivo('otro',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer;background:var(--panel2);color:var(--muted);border:2px solid var(--border)">➕ Otro</button>
+        </div>
+      </div>
+
+      <!-- Controlador -->
+      <div class="field">
+        <label>Controlador</label>
+        <select id="rex-sector" onchange="rexOnCtrlChange()"
+          style="padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.82rem;width:100%">
+        </select>
+      </div>
+
+      <!-- Hora -->
+      <div class="field">
+        <label>Hora de ejecución</label>
+        <input type="time" id="rex-hora" value="07:00" oninput="rexCheckBombaConflict()"
+          style="padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.82rem;width:140px">
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-top:4px">Hora libre — independiente de la programación automática. Se sugiere según el motivo.</div>
+      </div>
+
+      <!-- Estado -->
+      <div class="field">
+        <label>¿Cuándo ocurre?</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button id="rex-estado-hecho" onclick="rexSetEstado('ejecutado',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;cursor:pointer;background:#14532d;color:#86efac;border:2px solid #16a34a;font-weight:700">✅ Ya ocurrió</button>
+          <button id="rex-estado-prog" onclick="rexSetEstado('proyectado',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;cursor:pointer;background:var(--panel2);color:var(--muted);border:2px solid var(--border)">📋 Programado</button>
+        </div>
+      </div>
+
+      <!-- Método de ejecución -->
+      <div class="field">
+        <label>Método de ejecución</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button id="rex-metodo-sistema" onclick="rexSetMetodo('sistema',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer;background:#14532d;color:#86efac;border:2px solid #16a34a">💧 Sistema de riego</button>
+          <button id="rex-metodo-manguera" onclick="rexSetMetodo('manguera',this)"
+            style="padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;cursor:pointer;background:var(--panel2);color:var(--muted);border:2px solid var(--border)">🪣 Manguera manual</button>
+        </div>
+        <div id="rex-metodo-hint" style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-top:6px">
+          Sistema de riego usa la bomba — se verifica conflicto con otros sectores del mismo grupo.
+        </div>
+      </div>
+
+      <!-- Aviso conflicto de bomba -->
+      <div id="rex-bomba-warning" style="display:none;background:rgba(120,53,15,0.18);border:1px solid #d97706;border-radius:8px;padding:10px 14px;font-family:var(--font-mono);font-size:0.72rem;color:#fbbf24"></div>
+
+      <!-- Zonas -->
+      <div class="field">
+        <label>Zonas a regar y minutos por zona</label>
+        <div id="rex-zonas-list" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--panel2)"></div>
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-top:4px">Marca las zonas y define los minutos de riego extra para cada una</div>
+      </div>
+
+      <!-- Duración total -->
+      <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--green)">
+        Duración total: <strong id="rex-dur-total">0 min</strong>
+      </div>
+
+      <!-- Notas -->
+      <div class="field">
+        <label>Notas (opcional)</label>
+        <input type="text" id="rex-notas" placeholder="ej: descongelar greens 1,4,5 — temperatura mínima -1°C"
+          style="padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:0.78rem;width:100%">
+      </div>
+
+      <div id="rex-warning" style="display:none;font-family:var(--font-mono);font-size:0.72rem;color:var(--red)"></div>
+
+      <!-- Guardar como plantilla (solo admin) -->
+      <div class="only-admin" style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">💾 Guardar configuración como plantilla</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="rex-plantilla-nombre" placeholder="ej. Descongelar Greens · ej. Calor Pérgola"
+            style="flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.75rem">
+          <button onclick="rexGuardarPlantilla()" style="padding:7px 14px;background:var(--panel);border:1px solid var(--green);color:var(--green);border-radius:7px;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">💾 Guardar</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;padding-top:4px">
+        <button onclick="saveRiegoExtra()" style="flex:1;padding:10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.85rem;font-weight:700;cursor:pointer">Guardar riego extra</button>
+        <button onclick="closeRiegoExtraModal()" style="padding:10px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--font-mono);font-size:0.82rem;cursor:pointer">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ════════════ MODAL: NOTIFICACIÓN SUPERVISOR ════════════ -->
+<div id="notif-supervisor-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:3000;align-items:center;justify-content:center;padding:16px">
+  <div style="max-width:480px;width:100%;background:var(--panel);border:1px solid #25D366;border-radius:16px;overflow:hidden">
+    <div style="padding:14px 18px;background:#1a3a2a;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:700;font-size:1rem;color:#86efac">📲 Notificar al supervisor</div>
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:#4ade80;margin-top:2px">Tarea de riego manual creada — envía al supervisor para asignar jardinero</div>
+      </div>
+      <button onclick="cerrarModalNotifSupervisor()" style="background:none;border:none;color:#4ade80;font-size:1.3rem;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">Mensaje pre-redactado con el detalle completo de la tarea. Edita si necesitas ajustar antes de enviar.</div>
+      <textarea id="notif-sup-text" rows="14"
+        style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--font-mono);font-size:0.72rem;resize:vertical;line-height:1.5"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="enviarWspSupervisor()" style="flex:1;padding:10px;background:#25D366;color:#fff;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;font-weight:700;cursor:pointer">📲 Abrir en WhatsApp</button>
+        <button id="btn-copiar-sup" onclick="copiarMsgSupervisor()" style="padding:10px 16px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:var(--font-mono);font-size:0.78rem;cursor:pointer">📋 Copiar</button>
+        <button onclick="cerrarModalNotifSupervisor()" style="padding:10px 16px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--font-mono);font-size:0.78rem;cursor:pointer">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 </main>
 
@@ -1388,6 +1761,8 @@ var ACCESS_POINTS = [
   { loc:"Golf (Trullenque)", ssid:"Trullenque2G", signal:"OK" }
 ];
 
+var TEMPLATES = []; // { id, nombre, motivo, metodo, sectorN, sectorName, zonas:[{id,label,min}], horaDefault, notas }
+
 var PUMP_GROUPS = [
   { id:"bomba-a", name:"Bomba A", icon:"A", sectors:[4,5],     names:["Alameda","Piscina"] },
   { id:"bomba-b", name:"Bomba B", icon:"B", sectors:[7,8],     names:["Torre 02 Aspersión","Torre 02 Goteros"] },
@@ -1399,31 +1774,31 @@ var PUMP_GROUPS = [
    start = minutos desde medianoche
 ============================================== */
 var PROGRAMS = [
-  { id:1,  sectorN:1,  sectorName:"Palitroque",        start:4*60+45,  dur:2,   freqMode:"dias", days:["L","M","X","J","V","S","D"], notes:"PGA - Macetas" },
-  { id:2,  sectorN:1,  sectorName:"Palitroque",        start:8*60+30,  dur:59,  freqMode:"dias", days:["L","X","V"], notes:"PGC - Céspedes" },
-  { id:3,  sectorN:2,  sectorName:"Padel",             start:13*60+15, dur:80,  freqMode:"dias", days:["M","J"], notes:"PGA - Macizos" },
-  { id:4,  sectorN:2,  sectorName:"Padel",             start:19*60,    dur:60,  freqMode:"dias", days:["L","X","V","S"], notes:"PGB - Árboles" },
-  { id:5,  sectorN:3,  sectorName:"Tenis Kiosko",      start:13*60,    dur:90,  freqMode:"dias", days:["M","J","S"], notes:"PGA" },
-  { id:6,  sectorN:3,  sectorName:"Tenis Kiosko",      start:17*60+30, dur:150, freqMode:"dias", days:["L","X","V"], notes:"PGB" },
-  { id:7,  sectorN:4,  sectorName:"Alameda",           start:22*60,    dur:28,  freqMode:"dias", days:["M","J","D"], notes:"PGA" },
-  { id:8,  sectorN:4,  sectorName:"Alameda",           start:22*60,    dur:58,  freqMode:"dias", days:["L","X","V"], notes:"PGB" },
-  { id:9,  sectorN:5,  sectorName:"Piscina",           start:22*60,    dur:32,  freqMode:"dias", days:["M","J","D"], notes:"PGA" },
-  { id:10, sectorN:5,  sectorName:"Piscina",           start:19*60+45, dur:56,  freqMode:"dias", days:["L","X","V"], notes:"PGB" },
-  { id:11, sectorN:6,  sectorName:"Rotonda Emigrantes",start:0*60+15,  dur:46,  freqMode:"dias", days:["V","D","L"], notes:"PGA" },
-  { id:12, sectorN:7,  sectorName:"Torre 02 Aspersión",start:0*60+15,  dur:42,  freqMode:"dias", days:["L","X","S"], notes:"PGA Obra" },
-  { id:13, sectorN:7,  sectorName:"Torre 02 Aspersión",start:18*60+15, dur:84,  freqMode:"dias", days:["L","X","V"], notes:"PGB Salones" },
-  { id:14, sectorN:8,  sectorName:"Torre 02 Goteros",  start:0*60+20,  dur:60,  freqMode:"dias", days:["L","M","X","J","V","S","D"], notes:"PGA" },
-  { id:15, sectorN:8,  sectorName:"Torre 02 Goteros",  start:15*60,    dur:90,  freqMode:"dias", days:["L","X","V"], notes:"PGB" },
-  { id:16, sectorN:9,  sectorName:"Golf Greenes",      start:3*60+30,  dur:113, freqMode:"dias", days:["M","J"], notes:"PGB" },
-  { id:17, sectorN:9,  sectorName:"Golf Greenes",      start:6*60,     dur:71,  freqMode:"dias", days:["L","X","V","S","D"], notes:"PGA" },
-  { id:18, sectorN:10, sectorName:"Golf Cancha",       start:4*60,     dur:94,  freqMode:"dias", days:["X","S"], notes:"PGA" },
-  { id:19, sectorN:10, sectorName:"Golf Cancha",       start:4*60,     dur:56,  freqMode:"dias", days:["M","V"], notes:"PGB" },
-  { id:20, sectorN:11, sectorName:"Jardín Infantil Golf",start:3*60,   dur:9,   freqMode:"dias", days:["L","X","V"], notes:"PGA" },
-  { id:21, sectorN:11, sectorName:"Jardín Infantil Golf",start:2*60+30,dur:33,  freqMode:"dias", days:["M","J","S","D"], notes:"PGB" },
-  { id:22, sectorN:12, sectorName:"Pérgola",           start:2*60,     dur:49,  freqMode:"dias", days:["L","M","X","J"], notes:"PGA" },
-  { id:23, sectorN:12, sectorName:"Pérgola",           start:15*60+30, dur:60,  freqMode:"dias", days:["L","M","X","J"], notes:"PGB" },
-  { id:24, sectorN:13, sectorName:"Murcia",            start:9*60,     dur:50,  freqMode:"dias", days:["L","M","X","J","V","S"], notes:"PGA" },
-  { id:25, sectorN:14, sectorName:"Capilla",           start:16*60+30, dur:80,  freqMode:"dias", days:["M","J","S"], notes:"PGA" }
+  { id:1,  sectorN:1,  sectorName:"Palitroque", programa:"A",        start:4*60+45,  dur:2,   freqMode:"dias", days:["L","M","X","J","V","S","D"], notes:"PGA - Macetas" },
+  { id:2,  sectorN:1,  sectorName:"Palitroque", programa:"C",        start:8*60+30,  dur:59,  freqMode:"dias", days:["L","X","V"], notes:"PGC - Céspedes" },
+  { id:3,  sectorN:2,  sectorName:"Padel", programa:"A",             start:13*60+15, dur:80,  freqMode:"dias", days:["M","J"], notes:"PGA - Macizos" },
+  { id:4,  sectorN:2,  sectorName:"Padel", programa:"B",             start:19*60,    dur:60,  freqMode:"dias", days:["L","X","V","S"], notes:"PGB - Árboles" },
+  { id:5,  sectorN:3,  sectorName:"Tenis Kiosko", programa:"A",      start:13*60,    dur:90,  freqMode:"dias", days:["M","J","S"], notes:"PGA" },
+  { id:6,  sectorN:3,  sectorName:"Tenis Kiosko", programa:"B",      start:17*60+30, dur:150, freqMode:"dias", days:["L","X","V"], notes:"PGB" },
+  { id:7,  sectorN:4,  sectorName:"Alameda", programa:"A",           start:22*60,    dur:28,  freqMode:"dias", days:["M","J","D"], notes:"PGA" },
+  { id:8,  sectorN:4,  sectorName:"Alameda", programa:"B",           start:22*60,    dur:58,  freqMode:"dias", days:["L","X","V"], notes:"PGB" },
+  { id:9,  sectorN:5,  sectorName:"Piscina", programa:"A",           start:22*60,    dur:32,  freqMode:"dias", days:["M","J","D"], notes:"PGA" },
+  { id:10, sectorN:5,  sectorName:"Piscina", programa:"B",           start:19*60+45, dur:56,  freqMode:"dias", days:["L","X","V"], notes:"PGB" },
+  { id:11, sectorN:6,  sectorName:"Rotonda Emigrantes", programa:"A",start:0*60+15,  dur:46,  freqMode:"dias", days:["V","D","L"], notes:"PGA" },
+  { id:12, sectorN:7,  sectorName:"Torre 02 Aspersión", programa:"A",start:0*60+15,  dur:42,  freqMode:"dias", days:["L","X","S"], notes:"PGA Obra" },
+  { id:13, sectorN:7,  sectorName:"Torre 02 Aspersión", programa:"B",start:18*60+15, dur:84,  freqMode:"dias", days:["L","X","V"], notes:"PGB Salones" },
+  { id:14, sectorN:8,  sectorName:"Torre 02 Goteros", programa:"A",  start:0*60+20,  dur:60,  freqMode:"dias", days:["L","M","X","J","V","S","D"], notes:"PGA" },
+  { id:15, sectorN:8,  sectorName:"Torre 02 Goteros", programa:"B",  start:15*60,    dur:90,  freqMode:"dias", days:["L","X","V"], notes:"PGB" },
+  { id:16, sectorN:9,  sectorName:"Golf Greenes", programa:"B",      start:3*60+30,  dur:113, freqMode:"dias", days:["M","J"], notes:"PGB" },
+  { id:17, sectorN:9,  sectorName:"Golf Greenes", programa:"A",      start:6*60,     dur:71,  freqMode:"dias", days:["L","X","V","S","D"], notes:"PGA" },
+  { id:18, sectorN:10, sectorName:"Golf Cancha", programa:"A",       start:4*60,     dur:94,  freqMode:"dias", days:["X","S"], notes:"PGA" },
+  { id:19, sectorN:10, sectorName:"Golf Cancha", programa:"B",       start:4*60,     dur:56,  freqMode:"dias", days:["M","V"], notes:"PGB" },
+  { id:20, sectorN:11, sectorName:"Jardín Infantil Golf", programa:"A",start:3*60,   dur:9,   freqMode:"dias", days:["L","X","V"], notes:"PGA" },
+  { id:21, sectorN:11, sectorName:"Jardín Infantil Golf", programa:"B",start:2*60+30,dur:33,  freqMode:"dias", days:["M","J","S","D"], notes:"PGB" },
+  { id:22, sectorN:12, sectorName:"Pérgola", programa:"A",           start:2*60,     dur:49,  freqMode:"dias", days:["L","M","X","J"], notes:"PGA" },
+  { id:23, sectorN:12, sectorName:"Pérgola", programa:"B",           start:15*60+30, dur:60,  freqMode:"dias", days:["L","M","X","J"], notes:"PGB" },
+  { id:24, sectorN:13, sectorName:"Murcia", programa:"A",            start:9*60,     dur:50,  freqMode:"dias", days:["L","M","X","J","V","S"], notes:"PGA" },
+  { id:25, sectorN:14, sectorName:"Capilla", programa:"A",           start:16*60+30, dur:80,  freqMode:"dias", days:["M","J","S"], notes:"PGA" }
 ];
 var nextId = 26;
 
@@ -1659,6 +2034,12 @@ function showTab(id) {
   if (id === "editor")        { if (!editorInitialized) { buildEditor(); editorInitialized = true; } else { renderPrograms(); } }
   if (id === "controladores") { ctrlCanalFilter = "all"; buildControllers(); }
   if (id === "config")        buildConfig();
+  if (id === "reportes") {
+    var repFecha = document.getElementById("rep-fecha");
+    if (repFecha && !repFecha.value) repFecha.value = new Date().toISOString().slice(0,10);
+    repSetPeriodo("semana", document.querySelector(".rep-periodo-btn[data-p='semana']"));
+  }
+  if (id === "clima")         climaInit();
 }
 
 /* ==============================================
@@ -2164,6 +2545,77 @@ function buildScheduleForDate(idx) {
     if (notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:4px">' + notas + '</div>';
     html += '</div>';
   }
+
+  // ── Riegos extra del día ──
+  var extras = (HISTORY[dateStr] && HISTORY[dateStr].extras) ? HISTORY[dateStr].extras : [];
+  if (extras.length > 0) {
+    // Separator
+    html += '<div style="margin:10px 0 6px;display:flex;align-items:center;gap:8px">';
+    html += '<div style="flex:1;height:1px;background:var(--border)"></div>';
+    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em">Riegos extra</span>';
+    html += '<div style="flex:1;height:1px;background:var(--border)"></div>';
+    html += '</div>';
+
+    extras.sort(function(a,b){ return (a.start||0)-(b.start||0); });
+    for (var xi = 0; xi < extras.length; xi++) {
+      var ex = extras[xi];
+      var exColor  = ex.motivo === "helada" ? "#93c5fd" : ex.motivo === "calor" ? "#fdba74" : ex.motivo === "reparacion" ? "#fca5a5" : ex.motivo === "evento" ? "#c4b5fd" : "#86efac";
+      var exBg     = ex.motivo === "helada" ? "rgba(59,130,246,0.10)" : ex.motivo === "calor" ? "rgba(249,115,22,0.10)" : ex.motivo === "reparacion" ? "rgba(220,38,38,0.08)" : ex.motivo === "evento" ? "rgba(139,92,246,0.08)" : "rgba(34,197,94,0.08)";
+      var exBorder = ex.motivo === "helada" ? "#3b82f6" : ex.motivo === "calor" ? "#f97316" : ex.motivo === "reparacion" ? "#dc2626" : ex.motivo === "evento" ? "#7c3aed" : "#22c55e";
+      var exIcon   = ex.motivo === "helada" ? "❄️" : ex.motivo === "calor" ? "🔥" : ex.motivo === "reparacion" ? "🔧" : ex.motivo === "evento" ? "⛔" : "➕";
+      var exLabel  = ex.motivo === "helada" ? "Helada" : ex.motivo === "calor" ? "Calor extremo" : ex.motivo === "reparacion" ? "Sistema en reparación" : ex.motivo === "evento" ? "Evento / cancha ocupada" : "Extra";
+      var exMetodoBadge = ex.metodo === "manguera"
+        ? ' <span style="font-family:var(--font-mono);font-size:0.6rem;background:#1a3a2a;color:#86efac;border:1px solid #22c55e;padding:1px 6px;border-radius:4px">🪣 manguera</span>'
+        : ' <span style="font-family:var(--font-mono);font-size:0.6rem;background:var(--panel2);color:var(--muted);border:1px solid var(--border);padding:1px 6px;border-radius:4px">💧 sistema</span>';
+      var exEnd    = minToHHMM((ex.start + ex.dur) >= 1440 ? (ex.start + ex.dur - 1440) : (ex.start + ex.dur));
+      var exExec   = ex.estado === "ejecutado";
+      var exLPct   = (ex.start / 1440 * 100).toFixed(2);
+      var exWPct   = Math.max(ex.dur / 1440 * 100, 0.8).toFixed(2);
+      var canEdit  = (currentRole === "admin" || currentRole === "operador");
+
+      html += '<div class="schedule-row" style="background:' + exBg + ';border-left:3px solid ' + exBorder + ';">';
+      html += '<div class="sr-top">';
+      html += '<span class="time-tag">' + minToHHMM(ex.start) + '</span>';
+      html += '<span class="sr-name" style="color:' + exColor + '">' + exIcon + ' ' + exLabel + ' · N°' + ex.sectorN + ' ' + ex.sectorName + exMetodoBadge + '</span>';
+      html += '<span class="sr-dur-label">' + ex.dur + ' min · hasta ' + exEnd;
+      if (exExec) html += ' <span style="color:#4ade80;font-size:0.6rem">● ejecutado</span>';
+      else        html += ' <span style="color:#9ca3af;font-size:0.6rem">○ programado</span>';
+      html += '</span>';
+      if (canEdit) {
+        html += '<span style="display:flex;gap:4px;margin-left:auto;flex-shrink:0">';
+        html += '<button onclick="openRiegoExtraModal(' + ex.id + ')" style="padding:2px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--blue);font-size:0.65rem;font-family:var(--font-mono);cursor:pointer">✎</button>';
+        html += '<button onclick="deleteRiegoExtra(\'' + dateStr + '\',' + ex.id + ')" style="padding:2px 8px;background:var(--panel2);border:1px solid #dc262640;border-radius:5px;color:var(--red);font-size:0.65rem;font-family:var(--font-mono);cursor:pointer">✕</button>';
+        html += '</span>';
+      }
+      html += '</div>';
+
+      // Timeline bar
+      var exSubBars = "";
+      var exCursor = ex.start;
+      if (ex.zonas && ex.zonas.length > 0) {
+        for (var zi2 = 0; zi2 < ex.zonas.length; zi2++) {
+          var zx = ex.zonas[zi2];
+          var zxL = (exCursor / 1440 * 100).toFixed(2);
+          var zxW = Math.max((zx.min||0) / 1440 * 100, 0.4).toFixed(2);
+          exSubBars += '<div style="position:absolute;top:0;height:100%;left:' + zxL + '%;width:' + zxW + '%;background:' + exColor + ';opacity:' + (zi2%2===0?"0.9":"0.5") + '"></div>';
+          exCursor += (zx.min || 0);
+        }
+        html += '<div class="sr-timeline">' + exSubBars + '</div>';
+        var zxChips = "";
+        for (var zi2 = 0; zi2 < ex.zonas.length; zi2++) {
+          var zx = ex.zonas[zi2];
+          zxChips += '<div class="sr-zone-chip" style="border-color:' + exBorder + '20"><span style="color:' + exColor + '">Z' + zx.id + '</span>' + (zx.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '<em>' + (zx.min||0) + 'min</em></div>';
+        }
+        html += '<div class="sr-zones">' + zxChips + '</div>';
+      } else {
+        html += '<div class="sr-timeline"><div class="sr-bar" style="left:' + exLPct + '%;width:' + exWPct + '%;background:' + exColor + '"></div></div>';
+      }
+
+      if (ex.notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:4px">' + ex.notas + '</div>';
+      html += '</div>';
+    }
+  }
+
   body.innerHTML = html;
 }
 
@@ -2970,7 +3422,8 @@ function editProgram(id) {
   var cancelBtn = document.getElementById("btn-cancelar");
   if (cancelBtn) cancelBtn.style.display = "inline-block";
 
-  // Scroll form into view
+  // Scroll form into view and re-render so card shows "editando"
+  renderPrograms();
   var formCard = document.querySelector("#pane-editor .form-card");
   if (formCard) formCard.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -3185,7 +3638,6 @@ function renderPrograms() {
   var searchEl = document.getElementById("prog-search");
   if (searchEl) search = searchEl.value.toLowerCase().trim();
 
-  // Filtrar programas por búsqueda
   var filtered = PROGRAMS;
   if (search) {
     filtered = PROGRAMS.filter(function(p) {
@@ -3197,103 +3649,156 @@ function renderPrograms() {
   }
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div style="padding:16px;color:var(--muted);font-family:var(--font-mono);font-size:0.8rem">' + (search ? 'Sin resultados para "' + search + '"' : "Sin programas registrados.") + '</div>';
+    list.innerHTML = '<div style="padding:20px;color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;text-align:center">'
+      + (search ? 'Sin resultados para &ldquo;' + search + '&rdquo;' : "Sin programas registrados.") + '</div>';
     return;
   }
 
-  // Group by controller, ordered 1→14
+  // Agrupar por controlador
   var byCtrl = {};
   for (var i = 0; i < filtered.length; i++) {
     var p = filtered[i];
     if (!byCtrl[p.sectorN]) byCtrl[p.sectorN] = [];
     byCtrl[p.sectorN].push(p);
   }
-  var ctrlOrder = Object.keys(byCtrl).map(function(k) { return parseInt(k, 10); });
-  ctrlOrder.sort(function(a, b) { return a - b; });
+  var ctrlOrder = Object.keys(byCtrl).map(function(k){ return parseInt(k,10); }).sort(function(a,b){ return a-b; });
 
   var html = "";
+
   for (var ci = 0; ci < ctrlOrder.length; ci++) {
     var sn = ctrlOrder[ci];
     var cprogs = byCtrl[sn];
     var ctrlName = cprogs[0].sectorName;
 
-    html += '<div style="background:var(--panel2);padding:8px 16px;border-bottom:1px solid var(--border);border-top:2px solid var(--green);margin-top:8px">';
-    html += '<span style="font-weight:700;font-size:0.85rem">N° ' + sn + ' · ' + ctrlName + '</span>';
-    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-left:10px">' + cprogs.length + ' programa' + (cprogs.length !== 1 ? "s" : "") + '</span>';
+    // Cabecera del controlador
+    html += '<div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 14px;'
+          + 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:' + (ci===0?'0':'14px') + '">';
+    html += '<span style="font-weight:700;font-size:0.85rem">N°\u202f' + sn + '\u00b7 ' + ctrlName + '</span>';
+    html += '<span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);background:var(--panel);'
+          + 'border:1px solid var(--border);border-radius:5px;padding:2px 8px">'
+          + cprogs.length + '\u00a0prog.</span>';
     html += '</div>';
 
-    // Group by programa letter, sorted A→D
+    // Agrupar por programa (A, B, C...)
     var byPg = {};
     for (var pi = 0; pi < cprogs.length; pi++) {
       var pg = cprogs[pi].programa || "?";
       if (!byPg[pg]) byPg[pg] = [];
       byPg[pg].push(cprogs[pi]);
     }
-    var pgOrder = Object.keys(byPg).sort(function(a, b) {
-      return a.toUpperCase().localeCompare(b.toUpperCase(), 'es', { numeric: true });
-    });
+    var pgOrder = Object.keys(byPg).sort(function(a,b){ return a.toUpperCase().localeCompare(b.toUpperCase(),'es',{numeric:true}); });
 
     for (var pgi = 0; pgi < pgOrder.length; pgi++) {
       var pgLetter = pgOrder[pgi];
-      var pgProgs = byPg[pgLetter];
-      var pgColor = pgLetter === "A" ? "#22c55e" : pgLetter === "B" ? "#38bdf8" : pgLetter === "C" ? "#f59e0b" : "#a78bfa";
-
-      html += '<div style="padding:5px 16px 3px;background:var(--panel);border-bottom:1px solid var(--border)">';
-      html += '<span style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;color:' + pgColor + '">Programa ' + pgLetter + '</span>';
-      html += '</div>';
+      var pgProgs  = byPg[pgLetter];
+      var pgColors = {A:{bg:"#14532d",txt:"#86efac"}, B:{bg:"#1e3a5f",txt:"#93c5fd"}, C:{bg:"#78350f",txt:"#fde68a"}, D:{bg:"#3b0764",txt:"#d8b4fe"}};
+      var pgC = pgColors[pgLetter] || {bg:"#374151",txt:"#d1d5db"};
 
       for (var ri = 0; ri < pgProgs.length; ri++) {
         var p = pgProgs[ri];
-        var conflict = hasConflictCheck(p);
-        var statusHtml = conflict
-          ? '<span class="conflict-inline">⚠ Conflicto</span>'
-          : '<span class="ok-inline">✓ OK</span>';
+        var conflict  = hasConflictCheck(p);
+        var isEditing = (editingId === p.id);
+        var cardId    = "prog-card-" + p.id;
+        var bodyId    = "prog-body-" + p.id;
 
-        var zonasHtml = "";
+        // próximo riego
+        var next = findNextIrrigation(p);
+        var nextTxt = "";
+        if (next) {
+          nextTxt = next.isToday ? "Hoy" : next.daysAway === 1 ? "Mañana" : "en " + next.daysAway + "\u00a0días";
+          nextTxt += " \u00b7 " + next.str;
+        } else {
+          nextTxt = "Manual";
+        }
+
+        // zonas
+        var zonaChips = "";
         if (p.zonasConMin && p.zonasConMin.length > 0) {
-          zonasHtml = '<div style="font-size:0.62rem;font-family:var(--font-mono);color:var(--muted);margin-top:4px;line-height:1.7">';
           for (var zi = 0; zi < p.zonasConMin.length; zi++) {
             var zz = p.zonasConMin[zi];
-            zonasHtml += '<span style="color:var(--blue)">Z' + zz.id + '</span> ' + zz.label.replace(/^Z[^\s]+ /, "") + ' <span style="color:var(--green);font-weight:700">' + zz.min + ' min</span><br>';
+            var zlabel = zz.label ? zz.label.replace(/^Z[^\s]+\s*/,"").slice(0,20) : "";
+            zonaChips += '<span class="prog-zona-chip">'
+              + '<span class="zn">Z' + zz.id + '</span>'
+              + (zlabel ? '<span style="color:var(--text);font-size:0.6rem">' + zlabel + '</span>' : '')
+              + '<span class="zm">' + zz.min + '\u00a0min</span>'
+              + '</span>';
           }
-          zonasHtml += '</div>';
         } else if (p.zonasLabels && p.zonasLabels.length > 0) {
-          zonasHtml = '<div style="font-size:0.62rem;font-family:var(--font-mono);color:var(--muted);margin-top:3px;line-height:1.5">';
           for (var zi = 0; zi < p.zonasLabels.length; zi++) {
-            zonasHtml += '· ' + p.zonasLabels[zi] + '<br>';
+            zonaChips += '<span class="prog-zona-chip"><span style="color:var(--text)">' + p.zonasLabels[zi] + '</span></span>';
           }
-          zonasHtml += '</div>';
         }
 
-        var isEditing = (editingId === p.id);
-        var rowStyle = 'padding-left:24px;' + (isEditing ? 'background:var(--green-dim);border-left:3px solid var(--green);' : '');
-        html += '<div class="prog-row" id="prog-row-' + p.id + '" style="' + rowStyle + '">';
-        html += '<div><span style="font-family:var(--font-mono);font-size:0.72rem">' + minToHHMM(p.start) + '</span> · ' + p.dur + ' min';
-        if (isEditing) html += ' <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--green);margin-left:6px">← editando</span>';
-        if (p.notes) html += '<br><span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted)">' + p.notes + '</span>';
-        html += zonasHtml + '</div>';
-        // Frecuencia + próximo riego
-        var next = findNextIrrigation(p);
-        var nextHtml = "";
+        // estado badge
+        var statusHtml = conflict
+          ? '<span class="conflict-inline">&#9888; Conflicto</span>'
+          : '<span class="ok-inline">&#10003; OK</span>';
+
+        // sub-line visible en la cabecera (compacto)
+        var freqShort = buildDaysLabel(p);
+        var subLine   = minToHHMM(p.start) + "\u00b7" + p.dur + "\u00a0min \u00b7 " + freqShort;
+        if (p.notes) subLine += " \u00b7 " + p.notes;
+
+        html += '<div class="prog-card' + (isEditing?" editing":"") + '" id="' + cardId + '">';
+
+        // HEAD — siempre visible, clic para expandir
+        html += '<div class="prog-card-head" onclick="progToggleCard(\'' + bodyId + '\')">';
+        html += '<span class="prog-card-badge" style="background:' + pgC.bg + ';color:' + pgC.txt + ';min-width:28px;text-align:center">' + pgLetter + '</span>';
+        html += '<div class="prog-card-info">';
+        html += '<div class="prog-card-title">';
+        if (isEditing) html += '<span style="font-size:0.6rem;color:var(--green);margin-right:6px">&#9998; editando</span>';
+        html += '<span style="font-weight:700">' + p.sectorName + '</span>'
+              + ' <span style="color:var(--muted);font-size:0.72rem;font-weight:400">'
+              + minToHHMM(p.start) + '\u00a0\u00b7\u00a0' + p.dur + '\u00a0min</span>';
+        html += '</div>';
+        html += '<div class="prog-card-sub">' + freqShort;
         if (next) {
-          if (next.isToday) nextHtml = '<span style="color:var(--green);font-weight:700">→ Hoy</span>';
-          else if (next.daysAway === 1) nextHtml = '<span style="color:var(--amber);font-weight:700">→ Mañana</span>';
-          else nextHtml = '<span style="color:var(--text)">→ en ' + next.daysAway + ' días</span>';
-          nextHtml = '<br><span style="font-size:0.6rem">' + nextHtml + ' <span style="color:var(--muted)">' + next.str + '</span></span>';
-        } else {
-          nextHtml = '<br><span style="font-size:0.6rem;color:var(--muted)">→ manual</span>';
+          var nextColor = next.isToday ? "var(--green)" : next.daysAway===1 ? "var(--amber)" : "var(--muted)";
+          html += ' \u00b7 <span style="color:' + nextColor + '">\u2192 ' + nextTxt + '</span>';
         }
-        html += '<div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--blue)">' + buildDaysLabel(p) + nextHtml + '</div>';
-        html += '<div>' + statusHtml + '</div>';
-        html += '<div style="display:flex;gap:6px;align-items:center">';
-        html += '<button class="edit-btn" onclick="editProgram(' + p.id + ')" title="Editar" style="' + (isEditing ? 'background:var(--green);color:#000;' : '') + '">✎</button>';
-        html += '<button class="del-btn"  onclick="deleteProgram(' + p.id + ')" title="Eliminar">✕</button>';
+        if (p.notes) html += ' \u00b7 ' + p.notes;
         html += '</div>';
         html += '</div>';
+        html += '<div class="prog-card-actions">' + statusHtml + '</div>';
+        html += '<div class="prog-card-actions" style="margin-left:4px">';
+        html += '<button class="edit-btn" onclick="event.stopPropagation();editProgram(' + p.id + ')" title="Editar"'
+              + (isEditing?' style="background:var(--green);color:#000"':'') + '>&#9998;</button>';
+        html += '<button class="del-btn"  onclick="event.stopPropagation();deleteProgram(' + p.id + ')" title="Eliminar">&#10005;</button>';
+        html += '</div>';
+        html += '</div>'; // end head
+
+        // BODY — expandible
+        html += '<div class="prog-card-body" id="' + bodyId + '">';
+        html += '<div class="prog-card-detail-grid">';
+
+        html += '<div><div class="prog-card-detail-label">Inicio</div>'
+              + '<div class="prog-card-detail-val" style="color:var(--green)">' + minToHHMM(p.start) + '</div></div>';
+        html += '<div><div class="prog-card-detail-label">Duración total</div>'
+              + '<div class="prog-card-detail-val">' + p.dur + '\u00a0min</div></div>';
+        html += '<div><div class="prog-card-detail-label">Frecuencia</div>'
+              + '<div class="prog-card-detail-val">' + buildDaysLabel(p) + '</div></div>';
+        html += '<div><div class="prog-card-detail-label">Próximo riego</div>'
+              + '<div class="prog-card-detail-val">' + nextTxt + '</div></div>';
+
+        html += '</div>'; // end detail-grid
+
+        if (zonaChips) {
+          html += '<div class="prog-card-detail-label" style="margin-bottom:6px">Zonas activas</div>';
+          html += '<div class="prog-zona-list">' + zonaChips + '</div>';
+        }
+
+        html += '</div>'; // end body
+        html += '</div>'; // end card
       }
     }
   }
   list.innerHTML = html;
+}
+
+function progToggleCard(bodyId) {
+  var body = document.getElementById(bodyId);
+  if (!body) return;
+  body.classList.toggle("open");
 }
 
 /* ==============================================
@@ -3480,10 +3985,11 @@ function buildConfig() {
   document.getElementById("cfg-stats").innerHTML =
     div("stat-card", lbl("Controladores") + val("v-blue", CONTROLLERS.length) + sub("en sistema")) +
     div("stat-card", lbl("Grupos de bomba") + val("v-amber", PUMP_GROUPS.length) + sub("compartida")) +
+    div("stat-card", lbl("Plantillas") + val("v-green", TEMPLATES.length) + sub("riego extra")) +
     div("stat-card", lbl("WiFi OK") + val("v-green", cfgOk) + sub("conectados")) +
-    div("stat-card", lbl("Intermitente") + val("v-amber", cfgWarn) + sub("revisar")) +
     div("stat-card", lbl("Sin señal") + val("v-red", cfgOff) + sub("sin conexión"));
 
+  buildPlantillasList();
   renderBombaList();
   renderCtrlList();
 }
@@ -3875,6 +4381,7 @@ function saveToStorage() {
   var data = {
     controllers: CONTROLLERS,
     programs: PROGRAMS,
+    templates: TEMPLATES,
     dates: DATES,
     pumpGroups: PUMP_GROUPS,
     history: HISTORY,
@@ -3899,6 +4406,7 @@ function loadFromStorage(callback) {
     if (data && data.controllers) {
       CONTROLLERS = data.controllers;
       PROGRAMS    = data.programs    || PROGRAMS;
+      TEMPLATES   = data.templates   || TEMPLATES;
       DATES       = data.dates       || DATES;
       if (data.pumpGroups && data.pumpGroups.length > 0) PUMP_GROUPS = data.pumpGroups;
       if (data.history) HISTORY = data.history;
@@ -3907,6 +4415,19 @@ function loadFromStorage(callback) {
       });
       if (PROGRAMS.length > 0)
         nextId = Math.max.apply(null, PROGRAMS.map(function(p){ return p.id; })) + 1;
+
+      // Normalizar campo programa: si falta, derivarlo de notes (PGA→A, PGB→B, etc.)
+      for (var pi = 0; pi < PROGRAMS.length; pi++) {
+        var p = PROGRAMS[pi];
+        if (!p.programa || p.programa === "") {
+          var notes = (p.notes || p.notas || "").trim();
+          if      (/^PGA/i.test(notes)) p.programa = "A";
+          else if (/^PGB/i.test(notes)) p.programa = "B";
+          else if (/^PGC/i.test(notes)) p.programa = "C";
+          else if (/^PGD/i.test(notes)) p.programa = "D";
+          else                          p.programa = "A";
+        }
+      }
     }
     if (callback) callback();
   })
@@ -3949,85 +4470,9 @@ function getNormalizedZonas(ev) {
 ============================================== */
 var prSelectedDays = new Set();
 
-// Asegura que todos los días de la semana que contiene isoRef existen en DATES.
-// Retorna el ISO del lunes de esa semana.
-function ensureWeekInDates(isoRef) {
-  var monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
-  var ref = new Date(isoRef + "T12:00:00");
-  var dow = ref.getDay();
-  var diffToMon = (dow === 0) ? -6 : 1 - dow;
-  var monday = new Date(ref);
-  monday.setDate(ref.getDate() + diffToMon);
-
-  for (var d = 0; d < 7; d++) {
-    var cur = new Date(monday);
-    cur.setDate(monday.getDate() + d);
-    var y  = cur.getFullYear();
-    var m  = cur.getMonth() + 1;
-    var dd = cur.getDate();
-    var label = dayNames[cur.getDay()] + " " + dd + " " + monthNames[m];
-    var curISO = y + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
-
-    var exists = false;
-    for (var i = 0; i < DATES.length; i++) {
-      if (DATES[i] === label) { exists = true; break; }
-    }
-    if (exists) continue;
-
-    var insertAt = DATES.length;
-    for (var i = 0; i < DATES.length; i++) {
-      if (dateToISO(DATES[i]) > curISO) { insertAt = i; break; }
-    }
-    DATES.splice(insertAt, 0, label);
-  }
-
-  // Retornar ISO del lunes
-  var mm = monday.getMonth() + 1;
-  var md = monday.getDate();
-  return monday.getFullYear() + "-" + (mm < 10 ? "0" : "") + mm + "-" + (md < 10 ? "0" : "") + md;
-}
-
-// Asegura que los próximos N días desde isoRef existen en DATES.
-function ensureNextDaysInDates(isoRef, n) {
-  var monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
-  var ref = new Date(isoRef + "T12:00:00");
-  for (var d = 0; d < n; d++) {
-    var cur = new Date(ref);
-    cur.setDate(ref.getDate() + d);
-    var y  = cur.getFullYear();
-    var m  = cur.getMonth() + 1;
-    var dd = cur.getDate();
-    var label = dayNames[cur.getDay()] + " " + dd + " " + monthNames[m];
-    var curISO = y + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
-
-    var exists = false;
-    for (var i = 0; i < DATES.length; i++) {
-      if (DATES[i] === label) { exists = true; break; }
-    }
-    if (exists) continue;
-
-    var insertAt = DATES.length;
-    for (var i = 0; i < DATES.length; i++) {
-      if (dateToISO(DATES[i]) > curISO) { insertAt = i; break; }
-    }
-    DATES.splice(insertAt, 0, label);
-  }
-}
-
 function openPrintRangeModal() {
   prSelectedDays = new Set();
-  // Asegurar que la semana actual está en DATES y pre-seleccionar el día actual
-  var todayIdx = findTodayIndex();
-  if (todayIdx >= 0) {
-    var todayISO = dateToISO(DATES[todayIdx]);
-    ensureWeekInDates(todayISO);
-    saveToStorage();
-    buildPMR(); // reconstruir nav para reflejar días nuevos
-    // Re-buscar índice del día actual después de posibles inserciones
-    todayIdx = findTodayIndex();
-  }
+  // Pre-seleccionar el día actual
   prSelectedDays.add(currentDateIdx);
   buildPrintRangeDays();
   var modal = document.getElementById("print-range-modal");
@@ -4041,13 +4486,13 @@ function closePrintRangeModal() {
 function buildPrintRangeDays() {
   var todayIdx = findTodayIndex();
   var winStart = Math.max(0, todayIdx - 10);
-  var winEnd   = Math.min(DATES.length - 1, todayIdx + 20);
+  var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
   var html = "";
   for (var i = winStart; i <= winEnd; i++) {
     var sel = prSelectedDays.has(i);
     var st = getDayStatus(DATES[i]);
     var dot = st === "ejecutado" ? "✅ " : st === "cambios" ? "⚠️ " : st === "no-regado" ? "❌ " : st === "lluvia" ? "🌧 " : "";
-    var isToday = (i === todayIdx);
+    var isToday = (i === findTodayIndex());
     var todayMark = isToday ? ' style="outline:2px solid var(--green);outline-offset:2px;' : ' style="';
     html += '<button onclick="prToggleDay(' + i + ')" ' + todayMark +
       'padding:5px 12px;border-radius:7px;font-family:var(--font-mono);font-size:0.68rem;cursor:pointer;border:1px solid ' +
@@ -4065,37 +4510,31 @@ function prToggleDay(idx) {
 
 function prSelectRange(mode) {
   var todayIdx = findTodayIndex();
-  var todayISO = todayIdx >= 0 ? dateToISO(DATES[todayIdx]) : new Date().toISOString().slice(0,10);
   prSelectedDays = new Set();
-
   if (mode === "today") {
     prSelectedDays.add(todayIdx);
   } else if (mode === "tomorrow") {
-    ensureNextDaysInDates(todayISO, 2);
-    saveToStorage(); buildPMR();
-    todayIdx = findTodayIndex();
     if (todayIdx + 1 < DATES.length) prSelectedDays.add(todayIdx + 1);
   } else if (mode === "week") {
-    // Lunes a domingo de la semana actual — asegurar que todos los días existen
-    var monISO = ensureWeekInDates(todayISO);
-    var d = new Date(monISO + "T12:00:00");
-    var sunDate = new Date(d); sunDate.setDate(d.getDate() + 6);
-    var sunISO = sunDate.toISOString().slice(0,10);
-    saveToStorage(); buildPMR();
+    // Lunes a domingo de la semana actual
+    var todayISO = dateToISO(DATES[todayIdx]);
+    var d = new Date(todayISO + "T12:00:00");
+    var dow = d.getDay(); // 0=dom
+    var diffToMon = dow === 0 ? -6 : 1 - dow;
+    var monDate = new Date(d); monDate.setDate(d.getDate() + diffToMon);
+    var sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
     for (var i = 0; i < DATES.length; i++) {
       var iso = dateToISO(DATES[i]);
-      if (iso >= monISO && iso <= sunISO) prSelectedDays.add(i);
+      if (iso >= monDate.toISOString().slice(0,10) && iso <= sunDate.toISOString().slice(0,10))
+        prSelectedDays.add(i);
     }
   } else if (mode === "next7") {
-    ensureNextDaysInDates(todayISO, 7);
-    saveToStorage(); buildPMR();
-    todayIdx = findTodayIndex();
-    var count = 0;
+    var todayISO = dateToISO(DATES[todayIdx]);
     for (var i = 0; i < DATES.length; i++) {
       var iso = dateToISO(DATES[i]);
       if (iso >= todayISO) {
         prSelectedDays.add(i);
-        if (++count >= 7) break;
+        if (prSelectedDays.size >= 7) break;
       }
     }
   } else if (mode === "none") {
@@ -4137,6 +4576,13 @@ function getEventsForDate(idx) {
     }
   }
   events.sort(function(a,b){ return (a.start||0) - (b.start||0); });
+  // Agregar riegos extra si existen
+  var extras = (HISTORY[DATES[idx]] && HISTORY[DATES[idx]].extras) ? HISTORY[DATES[idx]].extras : [];
+  for (var xi = 0; xi < extras.length; xi++) {
+    var ex = Object.assign({}, extras[xi]);
+    ex._isExtra = true;
+    events.push(ex);
+  }
   return { events: events, useHist: !!useHist };
 }
 
@@ -4166,31 +4612,13 @@ function printRangeReport() {
     if (events.length === 0) {
       html += '<p style="color:#999;font-size:10px;margin:8px 0 0">Sin riego programado.</p>';
     } else {
-      html += '<table><thead><tr><th>Hora</th><th>Controlador · Prog.</th><th>Min.</th><th>Frecuencia</th><th>Estado</th><th>Zonas</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Hora</th><th>Controlador · Prog.</th><th>Min.</th><th>Zonas</th><th>Estado</th></tr></thead><tbody>';
       for (var i = 0; i < events.length; i++) {
         var ev = events[i];
         // Determine start/dur depending on source (program or history entry)
         var startMin = ev.start || 0;
         var durMin   = ev.durReal || ev.dur || 0;
         var pgLabel  = ev.programa ? '<span class="prog-label pg-' + (ev.programa.charAt(0)||'a').toLowerCase() + '">' + ev.programa + '</span>' : '';
-
-        // Frecuencia: buscar en PROGRAMS si no está en el evento (historial)
-        var freqSrc = ev;
-        if (!ev.freqMode && ev.programId) {
-          for (var fi = 0; fi < PROGRAMS.length; fi++) {
-            if (PROGRAMS[fi].id === ev.programId) { freqSrc = PROGRAMS[fi]; break; }
-          }
-        }
-        if (!freqSrc.freqMode && ev.sectorN && ev.programa) {
-          for (var fi = 0; fi < PROGRAMS.length; fi++) {
-            if (PROGRAMS[fi].sectorN === ev.sectorN && PROGRAMS[fi].programa === ev.programa) { freqSrc = PROGRAMS[fi]; break; }
-          }
-        }
-        var freqLbl = '—';
-        if (freqSrc.freqMode === 'dias' && freqSrc.days && freqSrc.days.length) freqLbl = freqSrc.days.join('-');
-        else if (freqSrc.freqMode === 'intervalo' && freqSrc.interval) freqLbl = 'Cada ' + freqSrc.interval + ' día' + (freqSrc.interval > 1 ? 's' : '');
-        else if (freqSrc.freqMode === 'manual') freqLbl = 'Manual';
-
         var zonaChips = '';
         var zonas = getNormalizedZonas(ev);
         for (var zi = 0; zi < zonas.length; zi++) {
@@ -4201,22 +4629,18 @@ function printRangeReport() {
           zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + zz.minReal + 'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">' + zLabel + '</span>' : '') + '</span>';
         }
         var evEj = ev.ejecutado;
-        var evStatus = evEj === false
-          ? '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>'
-          : evEj === "anomalo"
-          ? '<span style="display:inline-block;background:#78350f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ Anómalo</span>'
-          : evEj === "lluvia"
-          ? '<span style="display:inline-block;background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">🌧 Suspendido</span>'
-          : useHist
-          ? '<span style="display:inline-block;background:#14532d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">✅ Ejecutado</span>'
-          : '<span style="display:inline-block;background:#374151;color:#d1d5db;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap">📋 Proyectado</span>';
-        html += '<tr>';
+        var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
+          : evEj === "anomalo" ? '<span style="color:#d97706;font-size:9px">⚠️ Anómalo</span>'
+          : evEj === "lluvia"  ? '<span style="color:#3b82f6;font-size:9px">🌧 Suspendido</span>'
+          : useHist ? '<span style="color:#16a34a;font-size:9px">✅ OK</span>' : '<span style="color:#6b7280;font-size:9px">Proyección</span>';
+        var extraRowStyle = ev._isExtra ? 'background:#eff6ff;' : '';
+        var extraIcon = ev._isExtra ? (ev.motivo === 'helada' ? '❄️ ' : ev.motivo === 'calor' ? '🔥 ' : ev.motivo === 'reparacion' ? '🔧 ' : ev.motivo === 'evento' ? '⛔ ' : '➕ ') : '';
+        html += '<tr style="' + extraRowStyle + '">';
         html += '<td><span class="time">' + minToHHMM(startMin) + '</span></td>';
-        html += '<td>' + pgLabel + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev.notas||ev.notes ? '<br><span style="color:#666;font-size:9px">' + (ev.notas||ev.notes) + '</span>' : '') + '</td>';
+        html += '<td>' + (ev._isExtra ? '<span style="background:#1e3a5f;color:#93c5fd;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">EXTRA</span>' : pgLabel) + extraIcon + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev._isExtra && ev.metodo ? ' <span style="font-size:8px;color:#666">' + (ev.metodo === 'manguera' ? '🪣 manguera' : '💧 sistema') + '</span>' : '') + (ev.notas ? '<br><span style="color:#666;font-size:9px">' + ev.notas + '</span>' : '') + '</td>';
         html += '<td><span class="dur">' + durMin + '</span></td>';
-        html += '<td style="font-family:monospace;font-size:9px">' + freqLbl + '</td>';
-        html += '<td>' + evStatus + '</td>';
         html += '<td>' + zonaChips + '</td>';
+        html += '<td>' + evStatus + '</td>';
         html += '</tr>';
       }
       html += '</tbody></table>';
@@ -4306,7 +4730,7 @@ function printDayReport() {
   if (events.length === 0) {
     html += '<p style="color:#999;text-align:center;padding:20px">Sin riego programado para este día.</p>';
   } else {
-    html += '<table><thead><tr><th>Hora inicio</th><th>Controlador · Programa</th><th>Duración</th><th>Frecuencia</th><th>Estado</th><th>Zonas</th><th>Línea de tiempo</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>Hora inicio</th><th>Controlador · Programa</th><th>Duración</th><th>Frecuencia</th><th>Zonas</th><th>Línea de tiempo</th></tr></thead><tbody>';
     for (var i = 0; i < events.length; i++) {
       var p = events[i];
       var startMin = p.start || 0;
@@ -4318,40 +4742,14 @@ function printDayReport() {
       var endMin   = startMin + durMin;
       var endStr   = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
       var pgLabel  = p.programa ? '<span class="prog-label pg-' + (p.programa.charAt(0)||'a').toLowerCase() + '">' + p.programa + '</span>' : '';
-
-      // --- Frecuencia: si el evento viene del historial puede no tener freqMode,
-      //     buscar el programa original por programId o por coincidencia de sectorN+programa
-      var freqSrc = p;
-      if (!p.freqMode && p.programId) {
-        for (var fi = 0; fi < PROGRAMS.length; fi++) {
-          if (PROGRAMS[fi].id === p.programId) { freqSrc = PROGRAMS[fi]; break; }
-        }
-      }
-      if (!freqSrc.freqMode && p.sectorN && p.programa) {
-        for (var fi = 0; fi < PROGRAMS.length; fi++) {
-          if (PROGRAMS[fi].sectorN === p.sectorN && PROGRAMS[fi].programa === p.programa) { freqSrc = PROGRAMS[fi]; break; }
-        }
-      }
-      var freqLabel = '—';
-      if (freqSrc.freqMode === 'dias' && freqSrc.days && freqSrc.days.length) {
-        freqLabel = freqSrc.days.join('-');
-      } else if (freqSrc.freqMode === 'intervalo' && freqSrc.interval) {
-        freqLabel = 'Cada ' + freqSrc.interval + ' día' + (freqSrc.interval > 1 ? 's' : '');
-      } else if (freqSrc.freqMode === 'manual') {
-        freqLabel = 'Manual';
-      }
-
-      // --- Estado: columna separada con badge de color
-      var statusCell = '';
+      // Status badge per entry
+      var entryStatus = '';
       if (useHist) {
-        if (evEj === false)         statusCell = '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>';
-        else if (evEj === 'anomalo') statusCell = '<span style="display:inline-block;background:#78350f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ Anómalo</span>';
-        else if (evEj === 'lluvia')  statusCell = '<span style="display:inline-block;background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">🌧 Suspendido</span>';
-        else                         statusCell = '<span style="display:inline-block;background:#14532d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">✅ Ejecutado</span>';
-      } else {
-        statusCell = '<span style="display:inline-block;background:#374151;color:#d1d5db;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap">📋 Proyectado</span>';
+        entryStatus = evEj === false        ? ' <span style="color:#dc2626;font-size:9px;font-weight:700">❌ No ejecutado</span>'
+                    : evEj === 'anomalo'    ? ' <span style="color:#d97706;font-size:9px;font-weight:700">⚠️ Anómalo</span>'
+                    : evEj === 'lluvia'     ? ' <span style="color:#2563eb;font-size:9px;font-weight:700">🌧 Suspendido</span>'
+                    : '<span style="color:#16a34a;font-size:9px">✅</span>';
       }
-
       var zonaChips = '';
       var zonas = getNormalizedZonas(p);
       for (var zi = 0; zi < zonas.length; zi++) {
@@ -4367,12 +4765,19 @@ function printDayReport() {
       var barColor = evEj === false ? '#dc2626' : evEj === 'lluvia' ? '#3b82f6' : evEj === 'anomalo' ? '#d97706' : color;
       var barHtml  = '<div class="bar-wrap"><div class="bar-seg" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+barColor+'"></div></div>';
       barHtml += '<span style="font-size:9px;color:#666;font-family:monospace">'+minToHHMM(startMin)+'–'+endStr+'</span>';
-      html += '<tr style="'+rowBg+'">';
+      var isExtraPrint = p._isExtra || false;
+      var extraBgPrint  = isExtraPrint ? 'background:#eff6ff;' : rowBg;
+      var extraPgLabel  = isExtraPrint
+        ? '<span style="background:#1e3a5f;color:#93c5fd;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">'
+          + (p.motivo==='helada'?'❄️ HELADA':p.motivo==='calor'?'🔥 CALOR':p.motivo==='reparacion'?'🔧 REPARACIÓN':p.motivo==='evento'?'⛔ EVENTO':'➕ EXTRA')
+          + '</span>'
+        : pgLabel;
+      var freqCell = isExtraPrint ? '—' : (p.days ? buildDaysLabel(p) : (p.freqMode==='intervalo'?'Cada '+p.interval+' días':'Manual'));
+      html += '<tr style="'+extraBgPrint+'">';
       html += '<td><span class="time">'+minToHHMM(startMin)+'</span></td>';
-      html += '<td>'+pgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
+      html += '<td>'+extraPgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+(isExtraPrint?'':entryStatus)+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
       html += '<td><span class="dur">'+durMin+' min</span></td>';
-      html += '<td style="font-family:monospace;font-size:9px">'+freqLabel+'</td>';
-      html += '<td>'+statusCell+'</td>';
+      html += '<td style="font-family:monospace;font-size:9px">'+freqCell+'</td>';
       html += '<td>'+zonaChips+'</td>';
       html += '<td>'+barHtml+'</td>';
       html += '</tr>';
@@ -4627,6 +5032,14 @@ function doLogin() {
     updateConflictBadge();
     // Forzar rebuild de controladores con datos actualizados
     if (document.getElementById("pane-controladores").classList.contains("active")) buildControllers();
+    // Obtener clima en background para mostrar banner de alertas
+    climaAutoFetch();
+    // Cargar tareas del jardinero
+    loadTareasJardinero(buildTareasPanel);
+    // Auto-actualizar tareas cada 2 minutos (sincronización con Estadio Verde)
+    setInterval(function() {
+      loadTareasJardinero(buildTareasPanel);
+    }, 2 * 60 * 1000);
   });
 }
 
@@ -4639,6 +5052,1398 @@ document.addEventListener("DOMContentLoaded", function() {
   var lp = document.getElementById("login-pass");
   if (lp) lp.focus();
 });
+
+/* ==============================================
+   CLIMA & ALERTAS
+   Open-Meteo API — sin clave, sin costo
+   Coordenadas: -33.41377, -70.57802 (Estadio Español, Las Condes)
+============================================== */
+var CLIMA_LAT  = -33.41377;
+var CLIMA_LON  = -70.57802;
+var CLIMA_DATA = null;          // último fetch
+var CLIMA_THRESHOLDS = { frost: 3, heat: 32 };  // umbrales por defecto
+
+var WMO_LABELS = {
+  0:"Despejado", 1:"Mayormente despejado", 2:"Parcialmente nublado", 3:"Nublado",
+  45:"Niebla", 48:"Niebla con escarcha",
+  51:"Llovizna leve", 53:"Llovizna", 55:"Llovizna intensa",
+  61:"Lluvia leve", 63:"Lluvia", 65:"Lluvia intensa",
+  71:"Nieve leve", 73:"Nieve", 75:"Nieve intensa",
+  77:"Granizo",
+  80:"Chubascos leves", 81:"Chubascos", 82:"Chubascos intensos",
+  85:"Nieve con viento", 86:"Nieve con viento intensa",
+  95:"Tormenta eléctrica", 96:"Tormenta con granizo", 99:"Tormenta con granizo intenso"
+};
+var WMO_EMOJI = {
+  0:"☀️", 1:"🌤️", 2:"⛅", 3:"☁️",
+  45:"🌫️", 48:"🌫️",
+  51:"🌦️", 53:"🌦️", 55:"🌧️",
+  61:"🌧️", 63:"🌧️", 65:"🌧️",
+  71:"🌨️", 73:"🌨️", 75:"❄️",
+  77:"🌨️",
+  80:"🌦️", 81:"🌦️", 82:"⛈️",
+  85:"❄️", 86:"❄️",
+  95:"⛈️", 96:"⛈️", 99:"⛈️"
+};
+
+function climaGetWmo(code) {
+  return { label: WMO_LABELS[code] || "Desconocido", emoji: WMO_EMOJI[code] || "🌡️" };
+}
+
+function climaInit() {
+  // Cargar umbrales guardados
+  var saved = localStorage.getItem("pmr_clima_thresholds");
+  if (saved) {
+    try {
+      var t = JSON.parse(saved);
+      CLIMA_THRESHOLDS.frost = t.frost !== undefined ? t.frost : 3;
+      CLIMA_THRESHOLDS.heat  = t.heat  !== undefined ? t.heat  : 32;
+    } catch(e) {}
+  }
+  document.getElementById("clima-thresh-frost").value = CLIMA_THRESHOLDS.frost;
+  document.getElementById("clima-thresh-heat").value  = CLIMA_THRESHOLDS.heat;
+
+  if (CLIMA_DATA) {
+    climaRender();  // ya tenemos datos frescos
+  } else {
+    climaFetch();
+  }
+}
+
+function climaSaveThresholds() {
+  CLIMA_THRESHOLDS.frost = parseFloat(document.getElementById("clima-thresh-frost").value) || 3;
+  CLIMA_THRESHOLDS.heat  = parseFloat(document.getElementById("clima-thresh-heat").value)  || 32;
+  localStorage.setItem("pmr_clima_thresholds", JSON.stringify(CLIMA_THRESHOLDS));
+  if (CLIMA_DATA) climaRender();
+  var btn = document.querySelector("#pane-clima button[onclick=\'climaSaveThresholds()\']");
+  // simple feedback
+  var el = document.querySelector("#pane-clima .section-title");
+  var savedMsg = document.createElement("span");
+  savedMsg.textContent = " ✓ Guardado";
+  savedMsg.style.cssText = "font-family:var(--font-mono);font-size:0.72rem;color:var(--green);margin-left:8px";
+  if (el) { el.appendChild(savedMsg); setTimeout(function(){ savedMsg.remove(); }, 2000); }
+}
+
+function climaFetch() {
+  var panel = document.getElementById("clima-alerts-panel");
+  if (panel) panel.innerHTML = "<div style=\"font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);padding:20px 0;text-align:center\">🔄 Obteniendo datos del clima…</div>";
+
+  var url = "https://api.open-meteo.com/v1/forecast"
+    + "?latitude=" + CLIMA_LAT
+    + "&longitude=" + CLIMA_LON
+    + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m"
+    + "&hourly=temperature_2m,precipitation,weather_code"
+    + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset"
+    + "&wind_speed_unit=kmh"
+    + "&timezone=America%2FSantiago"
+    + "&forecast_days=7";
+
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      CLIMA_DATA = data;
+      climaRender();
+    })
+    .catch(function(err){
+      if (panel) panel.innerHTML = "<div style=\"font-family:var(--font-mono);font-size:0.78rem;color:var(--red);padding:8px\">⚠️ No se pudo obtener el clima. Revisa tu conexión.</div>";
+    });
+}
+
+function climaRender() {
+  if (!CLIMA_DATA) return;
+  var d   = CLIMA_DATA;
+  var cur = d.current;
+  var daily = d.daily;
+  var hourly = d.hourly;
+
+  // ── Temperatura actual ──
+  var tempNow = cur.temperature_2m !== undefined ? cur.temperature_2m.toFixed(1) : "—";
+  var feels   = cur.apparent_temperature !== undefined ? cur.apparent_temperature.toFixed(1) : null;
+  var wmo     = climaGetWmo(cur.weather_code);
+  var hum     = cur.relative_humidity_2m !== undefined ? cur.relative_humidity_2m : null;
+  var wind    = cur.wind_speed_10m !== undefined ? cur.wind_speed_10m.toFixed(0) : null;
+  var precipNow = cur.precipitation !== undefined ? cur.precipitation.toFixed(1) : "0.0";
+
+  var tempColor = parseFloat(tempNow) <= CLIMA_THRESHOLDS.frost ? "#93c5fd"
+                : parseFloat(tempNow) >= CLIMA_THRESHOLDS.heat  ? "#f97316"
+                : "var(--text)";
+  document.getElementById("clima-temp-now").textContent = tempNow + " °C";
+  document.getElementById("clima-temp-now").style.color = tempColor;
+  document.getElementById("clima-feels").textContent = feels ? "Sensación: " + feels + " °C" : "";
+  document.getElementById("clima-condition").textContent = wmo.emoji + " " + wmo.label;
+  document.getElementById("clima-precip-now").textContent = precipNow + " mm";
+  document.getElementById("clima-humidity").textContent = hum !== null ? "💧 Humedad: " + hum + "%" : "";
+
+  // Mín/Máx hoy
+  var tmax = daily.temperature_2m_max ? daily.temperature_2m_max[0] : null;
+  var tmin = daily.temperature_2m_min ? daily.temperature_2m_min[0] : null;
+  document.getElementById("clima-minmax").textContent = (tmin !== null ? tmin.toFixed(1) : "—") + " / " + (tmax !== null ? tmax.toFixed(1) : "—") + " °C";
+  document.getElementById("clima-wind").textContent = wind ? "💨 Viento: " + wind + " km/h" : "";
+
+  // Amanecer/Atardecer
+  var sunrise = daily.sunrise ? daily.sunrise[0].slice(11,16) : "—";
+  var sunset  = daily.sunset  ? daily.sunset[0].slice(11,16)  : "—";
+  document.getElementById("clima-sun").textContent = "🌅 " + sunrise + "   🌇 " + sunset;
+  document.getElementById("clima-updated").textContent = "Actualizado: " + new Date().toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit"});
+
+  // ── Pronóstico 7 días ──
+  var fcHtml = "";
+  var DAY_NAMES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  for (var i = 0; i < 7; i++) {
+    if (!daily.temperature_2m_max || !daily.temperature_2m_max[i]) continue;
+    var date = new Date(daily.time[i] + "T12:00:00");
+    var dname = i === 0 ? "Hoy" : i === 1 ? "Mañana" : DAY_NAMES[date.getDay()];
+    var fmax = daily.temperature_2m_max[i].toFixed(0);
+    var fmin = daily.temperature_2m_min[i].toFixed(0);
+    var fwmo = climaGetWmo(daily.weather_code[i]);
+    var fprecip = daily.precipitation_sum ? daily.precipitation_sum[i] : 0;
+    var isFrost = parseFloat(fmin) <= CLIMA_THRESHOLDS.frost;
+    var isHeat  = parseFloat(fmax) >= CLIMA_THRESHOLDS.heat;
+    var cardBorder = isFrost ? "border-color:#3b82f6" : isHeat ? "border-color:#f97316" : "";
+    var cardBg     = isFrost ? "background:rgba(59,130,246,0.08)" : isHeat ? "background:rgba(249,115,22,0.08)" : "";
+    fcHtml += "<div style=\"background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;" + cardBorder + ";" + cardBg + "\">"
+      + "<div style=\"font-size:0.68rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:4px\">" + dname + "</div>"
+      + "<div style=\"font-size:1.4rem\">" + fwmo.emoji + "</div>"
+      + "<div style=\"font-size:0.75rem;font-weight:700;margin-top:2px\">"
+        + "<span style=\"color:#f97316\">" + fmax + "°</span>"
+        + " / <span style=\"color:#93c5fd\">" + fmin + "°</span>"
+      + "</div>"
+      + (fprecip > 0 ? "<div style=\"font-size:0.65rem;color:#3b82f6;font-family:var(--font-mono);margin-top:3px\">💧 " + fprecip.toFixed(1) + " mm</div>" : "")
+      + (isFrost ? "<div style=\"font-size:0.62rem;color:#93c5fd;font-weight:700;margin-top:3px\">❄️ HELADA</div>" : "")
+      + (isHeat  ? "<div style=\"font-size:0.62rem;color:#f97316;font-weight:700;margin-top:3px\">🔥 CALOR</div>" : "")
+      + "</div>";
+  }
+  document.getElementById("clima-forecast").innerHTML = fcHtml;
+
+  // ── Pronóstico horario hoy ──
+  var todayStr = daily.time ? daily.time[0] : "";
+  var hourHtml = "";
+  var now = new Date();
+  for (var h = 0; h < hourly.time.length; h++) {
+    var ht = hourly.time[h];
+    if (!ht.startsWith(todayStr)) continue;
+    var hHour = parseInt(ht.slice(11,13));
+    var hTemp = hourly.temperature_2m[h];
+    var hPrecip = hourly.precipitation ? hourly.precipitation[h] : 0;
+    var hwmo = climaGetWmo(hourly.weather_code[h]);
+    var isNow = (hHour === now.getHours());
+    var hColor = hTemp <= CLIMA_THRESHOLDS.frost ? "#93c5fd" : hTemp >= CLIMA_THRESHOLDS.heat ? "#f97316" : "var(--text)";
+    hourHtml += "<div style=\"background:var(--panel2);border:1px solid " + (isNow ? "var(--green)" : "var(--border)") + ";border-radius:8px;padding:8px 10px;text-align:center;min-width:58px\">"
+      + "<div style=\"font-size:0.65rem;font-family:var(--font-mono);color:" + (isNow ? "var(--green)" : "var(--muted)") + ";font-weight:" + (isNow ? "700" : "400") + "\">" + ht.slice(11,16) + "</div>"
+      + "<div style=\"font-size:1.1rem;margin:2px 0\">" + hwmo.emoji + "</div>"
+      + "<div style=\"font-size:0.75rem;font-weight:700;color:" + hColor + "\">" + hTemp.toFixed(0) + "°</div>"
+      + (hPrecip > 0 ? "<div style=\"font-size:0.6rem;color:#3b82f6\">💧" + hPrecip.toFixed(1) + "</div>" : "")
+      + "</div>";
+  }
+  document.getElementById("clima-hourly-inner").innerHTML = hourHtml;
+
+  // ── Evaluar alertas ──
+  climaEvalAlerts();
+}
+
+function climaEvalAlerts() {
+  if (!CLIMA_DATA) return;
+  var daily = CLIMA_DATA.daily;
+  var alerts = [];
+
+  // Revisar próximos 7 días
+  for (var i = 0; i < 7; i++) {
+    if (!daily.temperature_2m_min || daily.temperature_2m_min[i] === undefined) continue;
+    var tmin = daily.temperature_2m_min[i];
+    var tmax = daily.temperature_2m_max[i];
+    var fechaStr = daily.time[i];
+    var date = new Date(fechaStr + "T12:00:00");
+    var DAY_NAMES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+    var dname = i === 0 ? "hoy" : i === 1 ? "mañana" : "el " + DAY_NAMES[date.getDay()] + " " + date.getDate();
+
+    if (tmin <= CLIMA_THRESHOLDS.frost) {
+      alerts.push({ type: "frost", day: dname, fecha: fechaStr, tmin: tmin, tmax: tmax, idx: i });
+    }
+    if (tmax >= CLIMA_THRESHOLDS.heat) {
+      alerts.push({ type: "heat",  day: dname, fecha: fechaStr, tmin: tmin, tmax: tmax, idx: i });
+    }
+  }
+
+  climaRenderAlerts(alerts);
+}
+
+function climaRenderAlerts(alerts) {
+  var panel  = document.getElementById("clima-alerts-panel");
+  var banner = document.getElementById("clima-alert-banner");
+  var wspSec = document.getElementById("clima-wsp-section");
+
+  if (!alerts.length) {
+    if (panel)  panel.innerHTML  = "<div style=\"font-family:var(--font-mono);font-size:0.78rem;color:var(--green);padding:8px 0\">✅ Sin alertas climáticas para los próximos 7 días.</div>";
+    if (banner) banner.style.display = "none";
+    if (wspSec) wspSec.style.display = "none";
+    return;
+  }
+
+  // ── Panel interno de la pestaña Clima ──
+  var panelHtml = "";
+  var frostAlerts = alerts.filter(function(a){ return a.type === "frost"; });
+  var heatAlerts  = alerts.filter(function(a){ return a.type === "heat";  });
+
+  if (frostAlerts.length) {
+    panelHtml += "<div style=\"background:rgba(37,99,235,0.12);border:1px solid #3b82f6;border-radius:10px;padding:12px 16px;margin-bottom:10px\">"
+      + "<div style=\"font-weight:700;font-family:var(--font-mono);font-size:0.82rem;color:#93c5fd;margin-bottom:6px\">❄️ ALERTA HELADA</div>";
+    frostAlerts.forEach(function(a){
+      panelHtml += "<div style=\"font-size:0.78rem;font-family:var(--font-mono);color:var(--text);margin-bottom:3px\">• Mínima de <strong>" + a.tmin.toFixed(1) + "°C</strong> " + a.day + " (umbral: ≤ " + CLIMA_THRESHOLDS.frost + "°C)</div>";
+    });
+    panelHtml += "<div style=\"font-size:0.72rem;color:var(--muted);margin-top:6px\">Considera riego adicional nocturno en zonas sensibles para proteger raíces.</div></div>";
+  }
+  if (heatAlerts.length) {
+    panelHtml += "<div style=\"background:rgba(249,115,22,0.10);border:1px solid #f97316;border-radius:10px;padding:12px 16px;margin-bottom:10px\">"
+      + "<div style=\"font-weight:700;font-family:var(--font-mono);font-size:0.82rem;color:#f97316;margin-bottom:6px\">🔥 ALERTA CALOR EXTREMO</div>";
+    heatAlerts.forEach(function(a){
+      panelHtml += "<div style=\"font-size:0.78rem;font-family:var(--font-mono);color:var(--text);margin-bottom:3px\">• Máxima de <strong>" + a.tmax.toFixed(1) + "°C</strong> " + a.day + " (umbral: ≥ " + CLIMA_THRESHOLDS.heat + "°C)</div>";
+    });
+    panelHtml += "<div style=\"font-size:0.72rem;color:var(--muted);margin-top:6px\">Evalúa riego suplementario diurno en sectores expuestos.</div></div>";
+  }
+  if (panel) panel.innerHTML = panelHtml;
+
+  // ── Banner global (visible en todas las pestañas) ──
+  if (banner) {
+    var hasFrost = frostAlerts.length > 0;
+    var hasHeat  = heatAlerts.length  > 0;
+    var parts = [];
+    if (hasFrost) parts.push("❄️ Helada " + frostAlerts[0].day + " (" + frostAlerts[0].tmin.toFixed(1) + "°C)");
+    if (hasHeat)  parts.push("🔥 Calor extremo " + heatAlerts[0].day  + " (" + heatAlerts[0].tmax.toFixed(1) + "°C)");
+    var isBothOrHeat = hasHeat && !hasFrost;
+    banner.style.display = "block";
+    banner.style.background = hasFrost && hasHeat ? "rgba(120,53,15,0.18)"
+                            : hasFrost             ? "rgba(37,99,235,0.13)"
+                                                   : "rgba(249,115,22,0.13)";
+    banner.style.border = "1px solid " + (hasFrost && !hasHeat ? "#3b82f6" : hasHeat && !hasFrost ? "#f97316" : "#d97706");
+    banner.style.color  = hasFrost && !hasHeat ? "#93c5fd" : hasHeat && !hasFrost ? "#f97316" : "#fbbf24";
+    banner.innerHTML = "⚠️ Alerta climática: " + parts.join("  ·  ") + " — <span style=\"text-decoration:underline\">ver pestaña Clima</span>";
+  }
+
+  // ── Sección mensaje para jefa ──
+  if (wspSec) {
+    wspSec.style.display = "block";
+    var msgLines = ["*PMR EE · Estadio Español*", "_Alerta climática — Áreas Verdes_", ""];
+    if (frostAlerts.length) {
+      msgLines.push("❄️ *RIESGO DE HELADA*");
+      frostAlerts.forEach(function(a){
+        msgLines.push("  • Mín. " + a.tmin.toFixed(1) + "°C " + a.day);
+      });
+      msgLines.push("→ Considera riego nocturno adicional en zonas sensibles (raíces y trasplantes recientes).");
+      msgLines.push("");
+    }
+    if (heatAlerts.length) {
+      msgLines.push("🔥 *CALOR EXTREMO*");
+      heatAlerts.forEach(function(a){
+        msgLines.push("  • Máx. " + a.tmax.toFixed(1) + "°C " + a.day);
+      });
+      msgLines.push("→ Evalúa riego suplementario diurno en sectores expuestos al sol directo.");
+      msgLines.push("");
+    }
+    msgLines.push("_Generado por PMR EE · " + new Date().toLocaleDateString("es-CL") + " " + new Date().toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit"}) + "_");
+    document.getElementById("clima-wsp-text").value = msgLines.join("\n");
+  }
+}
+
+function climaSendWsp() {
+  var msg = document.getElementById("clima-wsp-text").value;
+  var url = "https://wa.me/?text=" + encodeURIComponent(msg);
+  window.open(url, "_blank");
+}
+
+function climaCopyWsp() {
+  var msg = document.getElementById("clima-wsp-text").value;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(msg).then(function(){
+      var btn = document.querySelector("#pane-clima button[onclick=\'climaCopyWsp()\']");
+      var orig = "📋 Copiar mensaje";
+      if (btn) { btn.textContent = "✓ Copiado"; setTimeout(function(){ btn.textContent = orig; }, 2000); }
+    });
+  } else {
+    var ta = document.getElementById("clima-wsp-text");
+    ta.select(); document.execCommand("copy");
+  }
+}
+
+// Auto-fetch clima en background al iniciar sesión, para que el banner aparezca sin entrar a la pestaña
+function climaAutoFetch() {
+  var url = "https://api.open-meteo.com/v1/forecast"
+    + "?latitude=" + CLIMA_LAT + "&longitude=" + CLIMA_LON
+    + "&current=temperature_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m,relative_humidity_2m"
+    + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset"
+    + "&hourly=temperature_2m,precipitation,weather_code"
+    + "&wind_speed_unit=kmh&timezone=America%2FSantiago&forecast_days=7";
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      CLIMA_DATA = data;
+      // Cargar umbrales guardados antes de evaluar
+      var saved = localStorage.getItem("pmr_clima_thresholds");
+      if (saved) { try { var t = JSON.parse(saved); CLIMA_THRESHOLDS.frost = t.frost || 3; CLIMA_THRESHOLDS.heat = t.heat || 32; } catch(e){} }
+      climaEvalAlerts();
+    })
+    .catch(function(){});  // silencioso si falla
+}
+
+
+/* ==============================================
+   RIEGOS EXTRA
+   Guardados en HISTORY[dateStr].extras[]
+   Estructura: { id, motivo, sectorN, sectorName, start, dur, zonas:[{id,label,min}], estado, notas, creadoEn }
+============================================== */
+var rexMotivo = "helada";
+var rexEstado = "ejecutado";
+var rexMetodo = "sistema"; // "sistema" | "manguera"
+var rexEditId = null; // null = nuevo, number = editar existente
+
+function openRiegoExtraModal(editId) {
+  rexEditId = editId !== undefined ? editId : null;
+  var dateStr = DATES[currentDateIdx];
+
+  // Título y fecha
+  var modal = document.getElementById("riego-extra-modal");
+  document.getElementById("rex-modal-date").textContent = dateStr;
+  document.getElementById("rex-modal-title").textContent = rexEditId !== null ? "✎ Editar riego extra" : "➕ Nuevo riego extra";
+
+  // Poblar selector de plantillas
+  rexPopularPlantillas();
+
+  // Poblar selector de controladores
+  var sel = document.getElementById("rex-sector");
+  sel.innerHTML = "";
+  for (var i = 0; i < CONTROLLERS.length; i++) {
+    var c = CONTROLLERS[i];
+    var opt = document.createElement("option");
+    opt.value = c.n;
+    opt.textContent = "N°" + c.n + " · " + c.name;
+    sel.appendChild(opt);
+  }
+
+  if (rexEditId !== null) {
+    // Cargar datos del extra existente
+    var ex = rexFindById(dateStr, rexEditId);
+    if (ex) {
+      rexSetMotivo(ex.motivo, null);
+      rexSetEstado(ex.estado, null);
+      rexSetMetodo(ex.metodo || "sistema", null);
+      sel.value = ex.sectorN;
+      document.getElementById("rex-hora").value = minToHHMM(ex.start);
+      document.getElementById("rex-notas").value = ex.notas || "";
+      rexOnCtrlChange(ex.zonas);
+    }
+  } else {
+    // Defaults
+    rexSetMotivo("helada", document.querySelector(".rex-motivo-btn[data-motivo='helada']"));
+    rexSetEstado("ejecutado", document.getElementById("rex-estado-hecho"));
+    rexSetMetodo("sistema", document.getElementById("rex-metodo-sistema"));
+    // Hora sugerida según motivo: helada → madrugada, calor → mediodía, otro → 08:00
+    document.getElementById("rex-hora").value = "07:00";
+    document.getElementById("rex-notas").value = "";
+    rexOnCtrlChange();
+  }
+
+  document.getElementById("rex-warning").style.display = "none";
+  modal.style.display = "block";
+}
+
+function closeRiegoExtraModal() {
+  document.getElementById("riego-extra-modal").style.display = "none";
+  rexEditId = null;
+}
+
+function rexSetMotivo(motivo, btn) {
+  rexMotivo = motivo;
+  var motivoStyles = {
+    helada:     { bg:"#1e3a5f", color:"#93c5fd", border:"#3b82f6" },
+    calor:      { bg:"#7c2d12", color:"#fdba74",  border:"#f97316" },
+    reparacion: { bg:"#7f1d1d", color:"#fca5a5",  border:"#dc2626" },
+    evento:     { bg:"#3b0764", color:"#c4b5fd",  border:"#7c3aed" },
+    otro:       { bg:"#1a3a2a", color:"#86efac",  border:"#22c55e" }
+  };
+  var btns = document.querySelectorAll(".rex-motivo-btn");
+  for (var i = 0; i < btns.length; i++) {
+    var b = btns[i];
+    var m = b.getAttribute("data-motivo");
+    var active = m === motivo;
+    if (active && motivoStyles[m]) {
+      b.style.background  = motivoStyles[m].bg;
+      b.style.color       = motivoStyles[m].color;
+      b.style.borderColor = motivoStyles[m].border;
+    } else {
+      b.style.background  = "var(--panel2)";
+      b.style.color       = "var(--muted)";
+      b.style.borderColor = "var(--border)";
+    }
+  }
+  // Hora sugerida según motivo (solo registros nuevos)
+  if (rexEditId === null) {
+    var horaEl = document.getElementById("rex-hora");
+    if (horaEl) {
+      if (motivo === "helada")     horaEl.value = "07:00";
+      else if (motivo === "calor") horaEl.value = "13:00";
+      else                         horaEl.value = "08:00";
+    }
+  }
+  rexCheckBombaConflict();
+}
+
+function rexSetEstado(estado, btn) {
+  rexEstado = estado;
+  var bHecho = document.getElementById("rex-estado-hecho");
+  var bProg  = document.getElementById("rex-estado-prog");
+  if (!bHecho || !bProg) return;
+  if (estado === "ejecutado") {
+    bHecho.style.background = "#14532d"; bHecho.style.color = "#86efac"; bHecho.style.borderColor = "#16a34a";
+    bProg.style.background  = "var(--panel2)"; bProg.style.color = "var(--muted)"; bProg.style.borderColor = "var(--border)";
+  } else {
+    bProg.style.background  = "#374151"; bProg.style.color = "#d1d5db"; bProg.style.borderColor = "#6b7280";
+    bHecho.style.background = "var(--panel2)"; bHecho.style.color = "var(--muted)"; bHecho.style.borderColor = "var(--border)";
+  }
+}
+
+function rexSetMetodo(metodo, btn) {
+  rexMetodo = metodo;
+  var bSistema   = document.getElementById("rex-metodo-sistema");
+  var bManguera  = document.getElementById("rex-metodo-manguera");
+  var hint       = document.getElementById("rex-metodo-hint");
+  if (!bSistema || !bManguera) return;
+  if (metodo === "sistema") {
+    bSistema.style.background  = "#14532d"; bSistema.style.color = "#86efac";  bSistema.style.borderColor = "#16a34a"; bSistema.style.fontWeight = "700";
+    bManguera.style.background = "var(--panel2)"; bManguera.style.color = "var(--muted)"; bManguera.style.borderColor = "var(--border)"; bManguera.style.fontWeight = "400";
+    if (hint) hint.textContent = "Sistema de riego usa la bomba — se verifica conflicto con otros sectores del mismo grupo.";
+  } else {
+    bManguera.style.background = "#1a3a2a"; bManguera.style.color = "#86efac"; bManguera.style.borderColor = "#22c55e"; bManguera.style.fontWeight = "700";
+    bSistema.style.background  = "var(--panel2)"; bSistema.style.color = "var(--muted)"; bSistema.style.borderColor = "var(--border)"; bSistema.style.fontWeight = "400";
+    if (hint) hint.textContent = "Manguera manual — sin uso de bomba, sin conflicto de riego automático.";
+  }
+  rexCheckBombaConflict();
+}
+
+function rexCheckBombaConflict() {
+  var warn = document.getElementById("rex-bomba-warning");
+  if (!warn) return;
+  // Solo aplica si método es sistema
+  if (rexMetodo !== "sistema") { warn.style.display = "none"; return; }
+  var sn       = parseInt(document.getElementById("rex-sector").value, 10);
+  var horaStr  = document.getElementById("rex-hora") ? document.getElementById("rex-hora").value : "06:00";
+  var startMin = timeToMin(horaStr);
+  var dur      = 0;
+  // Calcular dur desde zonas marcadas
+  var ctrl = null;
+  for (var i = 0; i < CONTROLLERS.length; i++) { if (CONTROLLERS[i].n === sn) { ctrl = CONTROLLERS[i]; break; } }
+  if (ctrl) {
+    for (var zi = 0; zi < ctrl.zonas.length; zi++) {
+      var z = ctrl.zonas[zi];
+      var cb  = document.getElementById("rex-z-cb-" + z.z);
+      var inp = document.getElementById("rex-z-min-" + z.z);
+      if (cb && cb.checked && inp) dur += parseInt(inp.value, 10) || 0;
+    }
+  }
+  if (dur === 0) dur = 30; // estimado si aún no hay zonas
+  var endMin = startMin + dur;
+  // Buscar grupo de bomba del controlador seleccionado
+  var conflicts = [];
+  for (var gi = 0; gi < PUMP_GROUPS.length; gi++) {
+    var g = PUMP_GROUPS[gi];
+    if (!g.sectors || g.sectors.indexOf(sn) === -1) continue;
+    // Buscar programas activos del mismo día que solapen
+    for (var pi = 0; pi < PROGRAMS.length; pi++) {
+      var p = PROGRAMS[pi];
+      if (p.sectorN === sn) continue; // mismo controlador, no conflicto
+      if (g.sectors.indexOf(p.sectorN) === -1) continue; // distinto grupo
+      var pEnd = p.start + p.dur;
+      if (startMin < pEnd && endMin > p.start) {
+        conflicts.push("N°" + p.sectorN + " " + p.sectorName + " (" + minToHHMM(p.start) + "–" + minToHHMM(pEnd) + ")");
+      }
+    }
+  }
+  if (conflicts.length > 0) {
+    warn.style.display = "block";
+    warn.innerHTML = "⚠️ <strong>Conflicto de bomba</strong> con: " + conflicts.join(", ") + "<br>"
+      + "<span style='font-weight:400'>Este riego extra coincide con un programa activo en el mismo grupo de bomba.</span><br>"
+      + "<button onclick=\"rexSetMetodo('manguera', document.getElementById('rex-metodo-manguera'))\" "
+      + "style='margin-top:8px;padding:5px 14px;background:#1a3a2a;color:#86efac;border:1px solid #22c55e;"
+      + "border-radius:7px;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;cursor:pointer'>"
+      + "🪣 Cambiar a manguera manual</button>";
+  } else {
+    warn.style.display = "none";
+  }
+}
+
+function rexOnCtrlChange(preselectedZonas) {
+  var sn = parseInt(document.getElementById("rex-sector").value, 10);
+  var ctrl = null;
+  for (var i = 0; i < CONTROLLERS.length; i++) {
+    if (CONTROLLERS[i].n === sn) { ctrl = CONTROLLERS[i]; break; }
+  }
+  var listEl = document.getElementById("rex-zonas-list");
+  if (!ctrl || !ctrl.zonas || ctrl.zonas.length === 0) {
+    listEl.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);padding:6px">Sin zonas registradas para este controlador.</div>';
+    return;
+  }
+  var html = "";
+  for (var zi = 0; zi < ctrl.zonas.length; zi++) {
+    var z = ctrl.zonas[zi];
+    var preZ = null;
+    if (preselectedZonas) {
+      for (var pi = 0; pi < preselectedZonas.length; pi++) {
+        if (String(preselectedZonas[pi].id) === String(z.z)) { preZ = preselectedZonas[pi]; break; }
+      }
+    }
+    var checked = preZ ? "checked" : "";
+    var preMin  = preZ ? preZ.min : 3;
+    html += '<div class="zona-modal-row" style="display:flex;align-items:center;gap:10px;padding:5px 4px;border-bottom:1px solid var(--border)">';
+    html += '<input type="checkbox" id="rex-z-cb-' + z.z + '" ' + checked + ' onchange="rexUpdateTotal()" style="width:16px;height:16px;accent-color:var(--green);flex-shrink:0">';
+    html += '<span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--blue);min-width:28px">Z' + z.z + '</span>';
+    html += '<span style="font-size:0.72rem;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (z.desc || "") + '</span>';
+    html += '<input type="number" id="rex-z-min-' + z.z + '" value="' + preMin + '" min="1" max="120" oninput="rexUpdateTotal()"'
+          + ' style="width:54px;padding:3px 6px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:0.78rem;font-weight:700;text-align:right">';
+    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">min</span>';
+    html += '</div>';
+  }
+  listEl.innerHTML = html;
+  rexUpdateTotal();
+}
+
+function rexUpdateTotal() {
+  var sn = parseInt(document.getElementById("rex-sector").value, 10);
+  var ctrl = null;
+  for (var i = 0; i < CONTROLLERS.length; i++) {
+    if (CONTROLLERS[i].n === sn) { ctrl = CONTROLLERS[i]; break; }
+  }
+  if (!ctrl) return;
+  var total = 0;
+  for (var zi = 0; zi < ctrl.zonas.length; zi++) {
+    var z = ctrl.zonas[zi];
+    var cb  = document.getElementById("rex-z-cb-" + z.z);
+    var inp = document.getElementById("rex-z-min-" + z.z);
+    if (cb && cb.checked && inp) total += parseInt(inp.value, 10) || 0;
+  }
+  document.getElementById("rex-dur-total").textContent = total + " min";
+  rexCheckBombaConflict();
+}
+
+function rexGetSelectedZonas() {
+  var sn = parseInt(document.getElementById("rex-sector").value, 10);
+  var ctrl = null;
+  for (var i = 0; i < CONTROLLERS.length; i++) {
+    if (CONTROLLERS[i].n === sn) { ctrl = CONTROLLERS[i]; break; }
+  }
+  if (!ctrl) return [];
+  var zonas = [];
+  for (var zi = 0; zi < ctrl.zonas.length; zi++) {
+    var z  = ctrl.zonas[zi];
+    var cb = document.getElementById("rex-z-cb-" + z.z);
+    var inp= document.getElementById("rex-z-min-" + z.z);
+    if (cb && cb.checked) {
+      zonas.push({ id: z.z, label: "Z" + z.z + " " + (z.desc || ""), min: parseInt(inp ? inp.value : 0, 10) || 0 });
+    }
+  }
+  return zonas;
+}
+
+function saveRiegoExtra() {
+  var warn = document.getElementById("rex-warning");
+  var sn   = parseInt(document.getElementById("rex-sector").value, 10);
+  var horaStr = document.getElementById("rex-hora").value || "06:00";
+  var notas   = document.getElementById("rex-notas").value.trim();
+  var zonas   = rexGetSelectedZonas();
+
+  if (zonas.length === 0) {
+    warn.style.display = "block";
+    warn.textContent = "⚠ Selecciona al menos una zona.";
+    return;
+  }
+  var dur = 0;
+  for (var zi = 0; zi < zonas.length; zi++) dur += zonas[zi].min;
+  if (dur === 0) {
+    warn.style.display = "block";
+    warn.textContent = "⚠ Los minutos deben ser mayores a 0.";
+    return;
+  }
+
+  var ctrl = null;
+  for (var i = 0; i < CONTROLLERS.length; i++) {
+    if (CONTROLLERS[i].n === sn) { ctrl = CONTROLLERS[i]; break; }
+  }
+
+  var dateStr = DATES[currentDateIdx];
+  if (!HISTORY[dateStr]) HISTORY[dateStr] = { status: "sin-confirmar", entries: [], extras: [] };
+  if (!HISTORY[dateStr].extras) HISTORY[dateStr].extras = [];
+
+  var startMin = timeToMin(horaStr);
+  var extra = {
+    id:          rexEditId !== null ? rexEditId : Date.now(),
+    motivo:      rexMotivo,
+    metodo:      rexMetodo,
+    sectorN:     sn,
+    sectorName:  ctrl ? ctrl.name : "",
+    start:       startMin,
+    dur:         dur,
+    zonas:       zonas,
+    estado:      rexEstado,
+    notas:       notas,
+    creadoEn:    new Date().toISOString()
+  };
+
+  if (rexEditId !== null) {
+    // Reemplazar existente
+    var arr = HISTORY[dateStr].extras;
+    var replaced = false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].id === rexEditId) { arr[i] = extra; replaced = true; break; }
+    }
+    if (!replaced) arr.push(extra);
+  } else {
+    HISTORY[dateStr].extras.push(extra);
+  }
+
+  saveToStorage();
+  // Si es manguera → crear tarea en nodo tareas_jardinero del Firebase
+  if (extra.metodo === "manguera" && rexEditId === null) {
+    saveTareaJardinero(extra, dateStr);
+  }
+  closeRiegoExtraModal();
+  buildScheduleForDate(currentDateIdx);
+  buildHistoryPanel(dateStr);
+}
+
+function deleteRiegoExtra(dateStr, extraId) {
+  if (!HISTORY[dateStr] || !HISTORY[dateStr].extras) return;
+  HISTORY[dateStr].extras = HISTORY[dateStr].extras.filter(function(e){ return e.id !== extraId; });
+  saveToStorage();
+  buildScheduleForDate(currentDateIdx);
+  buildHistoryPanel(dateStr);
+}
+
+function rexFindById(dateStr, id) {
+  if (!HISTORY[dateStr] || !HISTORY[dateStr].extras) return null;
+  for (var i = 0; i < HISTORY[dateStr].extras.length; i++) {
+    if (HISTORY[dateStr].extras[i].id === id) return HISTORY[dateStr].extras[i];
+  }
+  return null;
+}
+
+
+/* ==============================================
+   PLANTILLAS DE RIEGO EXTRA
+   Guardadas en TEMPLATES[] → Firebase
+============================================== */
+
+function rexPopularPlantillas() {
+  var sel = document.getElementById("rex-plantilla-sel");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Sin plantilla —</option>';
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    var t = TEMPLATES[i];
+    var icon = t.motivo === "helada" ? "❄️" : t.motivo === "calor" ? "🔥" : "➕";
+    var opt = document.createElement("option");
+    opt.value = t.id;
+    opt.textContent = icon + " " + t.nombre + " · N°" + t.sectorN + " " + t.sectorName;
+    sel.appendChild(opt);
+  }
+}
+
+function rexAplicarPlantilla() {
+  var sel = document.getElementById("rex-plantilla-sel");
+  if (!sel || !sel.value) return;
+  var tid = parseInt(sel.value, 10);
+  var t = null;
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    if (TEMPLATES[i].id === tid) { t = TEMPLATES[i]; break; }
+  }
+  if (!t) return;
+
+  // Aplicar todos los campos
+  rexSetMotivo(t.motivo, null);
+  rexSetEstado("ejecutado", document.getElementById("rex-estado-hecho"));
+  rexSetMetodo(t.metodo || "sistema", null);
+
+  var sectorSel = document.getElementById("rex-sector");
+  if (sectorSel) sectorSel.value = t.sectorN;
+
+  var horaEl = document.getElementById("rex-hora");
+  if (horaEl) horaEl.value = t.horaDefault || "07:00";
+
+  var notasEl = document.getElementById("rex-notas");
+  if (notasEl) notasEl.value = t.notas || "";
+
+  // Cargar zonas del controlador y preseleccionar las de la plantilla
+  rexOnCtrlChange(t.zonas);
+
+  // Feedback visual
+  sel.style.borderColor = "var(--green)";
+  setTimeout(function(){ sel.style.borderColor = "var(--border)"; }, 1500);
+}
+
+function rexGuardarPlantilla() {
+  var nombre = (document.getElementById("rex-plantilla-nombre") || {}).value;
+  if (!nombre || !nombre.trim()) {
+    alert("Escribe un nombre para la plantilla antes de guardar.");
+    return;
+  }
+  var sn = parseInt(document.getElementById("rex-sector").value, 10);
+  var ctrl = null;
+  for (var i = 0; i < CONTROLLERS.length; i++) {
+    if (CONTROLLERS[i].n === sn) { ctrl = CONTROLLERS[i]; break; }
+  }
+  var zonas = rexGetSelectedZonas();
+  if (zonas.length === 0) {
+    alert("Selecciona al menos una zona antes de guardar la plantilla.");
+    return;
+  }
+  var t = {
+    id:          Date.now(),
+    nombre:      nombre.trim(),
+    motivo:      rexMotivo,
+    metodo:      rexMetodo,
+    sectorN:     sn,
+    sectorName:  ctrl ? ctrl.name : "",
+    zonas:       zonas,
+    horaDefault: document.getElementById("rex-hora").value || "07:00",
+    notas:       document.getElementById("rex-notas").value || "",
+    creadoEn:    new Date().toISOString()
+  };
+  TEMPLATES.push(t);
+  saveToStorage();
+  rexPopularPlantillas();
+  buildPlantillasList();
+  // Feedback
+  var inp = document.getElementById("rex-plantilla-nombre");
+  if (inp) { inp.value = ""; inp.placeholder = "✓ Plantilla guardada: " + t.nombre; setTimeout(function(){ inp.placeholder = "ej. Descongelar Greens · ej. Calor Pérgola"; }, 2500); }
+}
+
+function deletePlantilla(id) {
+  TEMPLATES = TEMPLATES.filter(function(t){ return t.id !== id; });
+  saveToStorage();
+  rexPopularPlantillas();
+  buildPlantillasList();
+}
+
+function buildPlantillasList() {
+  var list = document.getElementById("cfg-plantillas-list");
+  if (!list) return;
+  if (!TEMPLATES || TEMPLATES.length === 0) {
+    list.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);padding:12px 0">Sin plantillas guardadas. Créalas desde el modal de Riego Extra.</div>';
+    return;
+  }
+  var html = "";
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    var t = TEMPLATES[i];
+    var icon    = t.motivo === "helada" ? "❄️" : t.motivo === "calor" ? "🔥" : "➕";
+    var metBadge = t.metodo === "manguera"
+      ? '<span style="font-family:var(--font-mono);font-size:0.6rem;background:#1a3a2a;color:#86efac;border:1px solid #22c55e;padding:1px 6px;border-radius:4px">🪣 manguera</span>'
+      : '<span style="font-family:var(--font-mono);font-size:0.6rem;background:var(--panel);color:var(--muted);border:1px solid var(--border);padding:1px 6px;border-radius:4px">💧 sistema</span>';
+    var zonasText = t.zonas.map(function(z){ return "Z" + z.id + "\u00a0" + z.min + "min"; }).join(" · ");
+    html += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">';
+    html += '<div style="font-size:1.2rem;flex-shrink:0;margin-top:2px">' + icon + '</div>';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-weight:700;font-size:0.85rem;margin-bottom:3px">' + t.nombre + '</div>';
+    html += '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);margin-bottom:4px">';
+    html += 'N°' + t.sectorN + ' ' + t.sectorName + ' · ' + t.horaDefault + ' · ' + metBadge;
+    html += '</div>';
+    html += '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--blue)">' + zonasText + '</div>';
+    if (t.notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:3px">' + t.notas + '</div>';
+    html += '</div>';
+    html += '<button onclick="deletePlantilla(' + t.id + ')" style="padding:4px 10px;background:none;border:1px solid #dc262640;border-radius:6px;color:var(--red);font-size:0.75rem;cursor:pointer;flex-shrink:0">✕</button>';
+    html += '</div>';
+  }
+  list.innerHTML = html;
+}
+
+
+/* ==============================================
+   REPORTES — DÍA / SEMANA / MES / AÑO
+============================================== */
+var repPeriodo = "semana";
+
+function repSetPeriodo(p, btn) {
+  repPeriodo = p;
+  var btns = document.querySelectorAll(".rep-periodo-btn");
+  for (var i = 0; i < btns.length; i++) {
+    var b = btns[i];
+    var active = b.getAttribute("data-p") === p;
+    b.style.background   = active ? "var(--green)" : "var(--panel)";
+    b.style.color        = active ? "#000"         : "var(--muted)";
+    b.style.borderColor  = active ? "var(--green)" : "var(--border)";
+    b.style.fontWeight   = active ? "700"          : "400";
+  }
+  buildReportes();
+}
+
+function repGetRango() {
+  var fechaEl = document.getElementById("rep-fecha");
+  var ref = fechaEl && fechaEl.value ? new Date(fechaEl.value + "T12:00:00") : new Date();
+  var desde, hasta;
+
+  if (repPeriodo === "dia") {
+    desde = new Date(ref); hasta = new Date(ref);
+  } else if (repPeriodo === "semana") {
+    var dow = ref.getDay(); // 0=dom
+    var diffMon = dow === 0 ? -6 : 1 - dow;
+    desde = new Date(ref); desde.setDate(ref.getDate() + diffMon);
+    hasta = new Date(desde); hasta.setDate(desde.getDate() + 6);
+  } else if (repPeriodo === "mes") {
+    desde = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    hasta = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+  } else { // anio
+    desde = new Date(ref.getFullYear(), 0, 1);
+    hasta = new Date(ref.getFullYear(), 11, 31);
+  }
+  return { desde: desde, hasta: hasta };
+}
+
+function isoFromDate(d) {
+  var m = d.getMonth()+1, dd = d.getDate();
+  return d.getFullYear() + "-" + (m<10?"0":"") + m + "-" + (dd<10?"0":"") + dd;
+}
+
+function buildReportes() {
+  var rango = repGetRango();
+  var desdeISO = isoFromDate(rango.desde);
+  var hastaISO = isoFromDate(rango.hasta);
+
+  // Label del rango
+  var labelEl = document.getElementById("rep-rango-label");
+  var opts = { day:"numeric", month:"long", year:"numeric" };
+  if (desdeISO === hastaISO) {
+    if (labelEl) labelEl.textContent = rango.desde.toLocaleDateString("es-CL", opts);
+  } else {
+    if (labelEl) labelEl.textContent = rango.desde.toLocaleDateString("es-CL", opts) + " — " + rango.hasta.toLocaleDateString("es-CL", opts);
+  }
+
+  // Recopilar días del período en DATES
+  var diasPeriodo = [];
+  for (var i = 0; i < DATES.length; i++) {
+    var iso = dateToISO(DATES[i]);
+    if (iso >= desdeISO && iso <= hastaISO) diasPeriodo.push({ str: DATES[i], iso: iso, idx: i });
+  }
+
+  // ── Resumen chips de días ──
+  var sumEl = document.getElementById("rep-dias-summary");
+  if (sumEl) {
+    if (diasPeriodo.length === 0) {
+      sumEl.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">Sin días registrados en este período.</div>';
+    } else {
+      var chips = "";
+      for (var i = 0; i < diasPeriodo.length; i++) {
+        var d = diasPeriodo[i];
+        var st = getDayStatus(d.str);
+        var stColors = { "ejecutado":"#14532d", "cambios":"#78350f", "no-regado":"#7f1d1d", "lluvia":"#1e3a5f", "sin-confirmar":"#374151" };
+        var stIcons  = { "ejecutado":"✅", "cambios":"⚠️", "no-regado":"❌", "lluvia":"🌧", "sin-confirmar":"📋" };
+        chips += '<span style="font-family:var(--font-mono);font-size:0.65rem;padding:3px 8px;border-radius:5px;background:' + (stColors[st]||"#374151") + ';color:#fff">'
+          + (stIcons[st]||"") + ' ' + d.str + '</span>';
+      }
+      sumEl.innerHTML = chips;
+    }
+  }
+
+  // ── Calcular datos por controlador ──
+  // { sectorN, sectorName, minProg, minReal, minExtra, diasRegados, extraCount, zonas:{id:{label,minProg,minReal}} }
+  var byCtrl = {};
+  for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+    var c = CONTROLLERS[ci];
+    byCtrl[c.n] = { sectorN:c.n, sectorName:c.name, minProg:0, minReal:0, minExtra:0, diasRegados:0, extraCount:0, extraManguera:0 };
+  }
+
+  var totalDias = diasPeriodo.length;
+  var diasEjec = 0, diasNoReg = 0, diasSuspend = 0;
+  var totalMinProg = 0, totalMinReal = 0, totalMinExtra = 0, totalExtras = 0;
+
+  for (var di = 0; di < diasPeriodo.length; di++) {
+    var dObj = diasPeriodo[di];
+    var h    = HISTORY[dObj.str];
+    var st   = getDayStatus(dObj.str);
+
+    if (st === "ejecutado" || st === "cambios") diasEjec++;
+    else if (st === "no-regado") diasNoReg++;
+    else if (st === "lluvia") diasSuspend++;
+
+    // Programas proyectados para ese día
+    var projected = getProjectedEntries(dObj.idx);
+    for (var pi = 0; pi < projected.length; pi++) {
+      var p = projected[pi];
+      var bn = byCtrl[p.sectorN];
+      if (!bn) continue;
+      bn.minProg += (p.dur || 0);
+      totalMinProg += (p.dur || 0);
+    }
+
+    // Historial real si confirmado
+    if (h && h.entries && st !== "sin-confirmar") {
+      for (var ei = 0; ei < h.entries.length; ei++) {
+        var e = h.entries[ei];
+        var bn2 = byCtrl[e.sectorN];
+        if (!bn2) continue;
+        var realMin = e.durReal || e.dur || 0;
+        if (e.ejecutado !== false && e.ejecutado !== "lluvia") {
+          bn2.minReal += realMin;
+          totalMinReal += realMin;
+          bn2.diasRegados++;
+        }
+      }
+    }
+
+    // Riegos extra
+    if (h && h.extras) {
+      for (var xi = 0; xi < h.extras.length; xi++) {
+        var ex = h.extras[xi];
+        var bn3 = byCtrl[ex.sectorN];
+        if (!bn3) continue;
+        bn3.minExtra += (ex.dur || 0);
+        bn3.extraCount++;
+        if (ex.metodo === "manguera") bn3.extraManguera++;
+        totalMinExtra += (ex.dur || 0);
+        totalExtras++;
+      }
+    }
+  }
+
+  // ── Stats cards ──
+  document.getElementById("rep-stats").innerHTML =
+    div("stat-card", lbl("Días en período") + val("v-blue", totalDias) + sub("con registro")) +
+    div("stat-card", lbl("Días ejecutados") + val("v-green", diasEjec) + sub("confirmados")) +
+    div("stat-card", lbl("No regados") + val("v-red", diasNoReg) + sub("sin riego")) +
+    div("stat-card", lbl("Min. programados") + val("v-blue", totalMinProg) + sub("total período")) +
+    div("stat-card", lbl("Min. reales") + val("v-green", totalMinReal) + sub("ejecutados")) +
+    div("stat-card", lbl("Riegos extra") + val("v-amber", totalExtras) + sub(totalMinExtra + " min extra"));
+
+  // ── Tabla por controlador ──
+  var body = document.getElementById("rep-body");
+  if (!body) return;
+
+  if (diasPeriodo.length === 0) {
+    body.innerHTML = '<div style="padding:20px;color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;text-align:center">Sin datos en este período. Agrega días al PMR EE que estén dentro del rango seleccionado.</div>';
+    return;
+  }
+
+  var html = "";
+  var ctrlKeys = Object.keys(byCtrl).map(Number).sort(function(a,b){return a-b;});
+
+  for (var ki = 0; ki < ctrlKeys.length; ki++) {
+    var sn = ctrlKeys[ki];
+    var r  = byCtrl[sn];
+    // Skip controladores sin actividad
+    if (r.minProg === 0 && r.minReal === 0 && r.minExtra === 0) continue;
+
+    var pctReal = r.minProg > 0 ? Math.min(100, Math.round(r.minReal / r.minProg * 100)) : null;
+    var barColor = pctReal === null ? "var(--muted)" : pctReal >= 90 ? "var(--green)" : pctReal >= 60 ? "var(--amber)" : "var(--red)";
+
+    html += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">';
+
+    // Header
+    html += '<div style="padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">';
+    html += '<span style="font-weight:700;font-size:0.85rem">N°' + sn + ' · ' + r.sectorName + '</span>';
+    html += '<div style="display:flex;gap:8px;align-items:center">';
+    if (r.extraCount > 0) {
+      html += '<span style="font-family:var(--font-mono);font-size:0.62rem;background:#78350f;color:#fde68a;padding:2px 7px;border-radius:5px">'
+        + r.extraCount + ' extra · ' + r.minExtra + ' min'
+        + (r.extraManguera > 0 ? ' · 🪣 ' + r.extraManguera : '') + '</span>';
+    }
+    html += '<span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted)">' + r.diasRegados + ' días regados</span>';
+    html += '</div></div>';
+
+    // Barras
+    html += '<div style="padding:12px 14px">';
+
+    // Programados
+    html += '<div style="margin-bottom:8px">';
+    html += '<div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:3px">';
+    html += '<span>Programado</span><span>' + r.minProg + ' min</span></div>';
+    html += '<div style="background:var(--panel2);border-radius:4px;height:8px;overflow:hidden">';
+    html += '<div style="width:100%;height:100%;background:var(--blue);opacity:0.6"></div></div></div>';
+
+    // Ejecutado real
+    if (r.minReal > 0 || r.minProg > 0) {
+      var pctW = r.minProg > 0 ? Math.min(100, Math.round(r.minReal/r.minProg*100)) : 0;
+      html += '<div style="margin-bottom:8px">';
+      html += '<div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:3px">';
+      html += '<span>Ejecutado real</span><span style="color:' + barColor + '">' + r.minReal + ' min';
+      if (pctReal !== null) html += ' (' + pctReal + '%)';
+      html += '</span></div>';
+      html += '<div style="background:var(--panel2);border-radius:4px;height:8px;overflow:hidden">';
+      html += '<div style="width:' + pctW + '%;height:100%;background:' + barColor + ';transition:width .4s"></div></div></div>';
+    }
+
+    // Extra
+    if (r.minExtra > 0) {
+      html += '<div>';
+      html += '<div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:3px">';
+      html += '<span>Riego extra</span><span style="color:var(--amber)">' + r.minExtra + ' min</span></div>';
+      html += '<div style="background:var(--panel2);border-radius:4px;height:8px;overflow:hidden">';
+      var extraPct = r.minProg > 0 ? Math.min(100, Math.round(r.minExtra/r.minProg*100)) : 30;
+      html += '<div style="width:' + extraPct + '%;height:100%;background:var(--amber);opacity:0.8"></div></div></div>';
+    }
+
+    html += '</div></div>';
+  }
+
+  body.innerHTML = html || '<div style="padding:20px;color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;text-align:center">Sin programas con actividad en este período.</div>';
+}
+
+function repImprimir() {
+  var rango = repGetRango();
+  var desdeISO = isoFromDate(rango.desde);
+  var hastaISO = isoFromDate(rango.hasta);
+  var periodoLabel = { dia:"Día", semana:"Semana", mes:"Mes", anio:"Año" }[repPeriodo] || "";
+  var opts = { day:"numeric", month:"long", year:"numeric" };
+  var rangoStr = desdeISO === hastaISO
+    ? rango.desde.toLocaleDateString("es-CL", opts)
+    : rango.desde.toLocaleDateString("es-CL", opts) + " — " + rango.hasta.toLocaleDateString("es-CL", opts);
+
+  // Recopilar datos
+  var diasPeriodo = [];
+  for (var i = 0; i < DATES.length; i++) {
+    var iso = dateToISO(DATES[i]);
+    if (iso >= desdeISO && iso <= hastaISO) diasPeriodo.push({ str:DATES[i], iso:iso, idx:i });
+  }
+
+  var byCtrl = {};
+  for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+    var c = CONTROLLERS[ci];
+    byCtrl[c.n] = { sectorN:c.n, sectorName:c.name, minProg:0, minReal:0, minExtra:0, extraCount:0, extraManguera:0, diasRegados:0, detalle:[] };
+  }
+  var totProg=0, totReal=0, totExtra=0, totExtras=0, diasEjec=0, diasNoReg=0, diasSuspend=0;
+
+  for (var di = 0; di < diasPeriodo.length; di++) {
+    var dObj = diasPeriodo[di];
+    var h = HISTORY[dObj.str];
+    var st = getDayStatus(dObj.str);
+    if (st==="ejecutado"||st==="cambios") diasEjec++;
+    else if (st==="no-regado") diasNoReg++;
+    else if (st==="lluvia") diasSuspend++;
+
+    var projected = getProjectedEntries(dObj.idx);
+    for (var pi=0;pi<projected.length;pi++) {
+      var p=projected[pi]; var bn=byCtrl[p.sectorN]; if(!bn)continue;
+      bn.minProg+=(p.dur||0); totProg+=(p.dur||0);
+    }
+    if (h&&h.entries&&st!=="sin-confirmar") {
+      for (var ei=0;ei<h.entries.length;ei++) {
+        var e=h.entries[ei]; var bn2=byCtrl[e.sectorN]; if(!bn2)continue;
+        if (e.ejecutado!==false&&e.ejecutado!=="lluvia") {
+          var rm=e.durReal||e.dur||0; bn2.minReal+=rm; totReal+=rm; bn2.diasRegados++;
+        }
+      }
+    }
+    if (h&&h.extras) {
+      for (var xi=0;xi<h.extras.length;xi++) {
+        var ex=h.extras[xi]; var bn3=byCtrl[ex.sectorN]; if(!bn3)continue;
+        bn3.minExtra+=(ex.dur||0); bn3.extraCount++; totExtra+=(ex.dur||0); totExtras++;
+        if(ex.metodo==="manguera") bn3.extraManguera++;
+        bn3.detalle.push({ dia:dObj.str, motivo:ex.motivo, metodo:ex.metodo, dur:ex.dur, zonas:ex.zonas, notas:ex.notas });
+      }
+    }
+  }
+
+  var w = window.open('','_blank');
+  if (!w) { alert("Permite ventanas emergentes."); return; }
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte PMR EE</title><style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:20px}');
+  w.document.write('h1{font-size:18px;color:#0a4f2e;border-bottom:3px solid #0a4f2e;padding-bottom:6px;margin-bottom:14px}');
+  w.document.write('h2{font-size:13px;color:#0a4f2e;margin:14px 0 6px;border-left:4px solid #4ade80;padding-left:8px}');
+  w.document.write('table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#0a4f2e;color:#fff;padding:5px 8px;text-align:left;font-size:10px}');
+  w.document.write('td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px;vertical-align:top}tr:nth-child(even)td{background:#f0fdf4}');
+  w.document.write('.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}');
+  w.document.write('.num{font-family:monospace;font-weight:700}.green{color:#14532d}.amber{color:#78350f}.red{color:#7f1d1d}');
+  w.document.write('.bar-wrap{background:#e5e7eb;border-radius:3px;height:6px;margin-top:3px;overflow:hidden}.bar-fill{height:100%;border-radius:3px}');
+  w.document.write('.footer{margin-top:20px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#999;text-align:center}');
+  w.document.write('@media print{button{display:none}}');
+  w.document.write('</style></head><body>');
+
+  // Header
+  w.document.write('<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px">');
+  w.document.write('<div><h1>Reporte de Riego — ' + periodoLabel + '</h1>');
+  w.document.write('<p style="font-size:10px;color:#666">Estadio Español · Departamento de Áreas Verdes</p></div>');
+  w.document.write('<div style="text-align:right;font-size:10px;color:#666"><span style="background:#0a4f2e;color:#fff;padding:2px 8px;border-radius:4px">' + rangoStr + '</span></div></div>');
+
+  // Resumen
+  w.document.write('<table><thead><tr><th>Días período</th><th>Ejecutados</th><th>No regados</th><th>Suspendidos</th><th>Min. prog.</th><th>Min. reales</th><th>Riegos extra</th><th>Min. extra</th></tr></thead><tbody>');
+  w.document.write('<tr><td class="num">' + diasPeriodo.length + '</td><td class="num green">' + diasEjec + '</td><td class="num red">' + diasNoReg + '</td><td class="num" style="color:#1e3a5f">' + diasSuspend + '</td>');
+  w.document.write('<td class="num">' + totProg + '</td><td class="num green">' + totReal + '</td><td class="num amber">' + totExtras + '</td><td class="num amber">' + totExtra + '</td></tr>');
+  w.document.write('</tbody></table>');
+
+  // Por controlador
+  w.document.write('<h2>Detalle por controlador</h2>');
+  w.document.write('<table><thead><tr><th>N°</th><th>Controlador</th><th>Min. prog.</th><th>Min. real</th><th>Cumplim.</th><th>Extras</th><th>Min. extra</th><th>Manguera</th></tr></thead><tbody>');
+  var keys = Object.keys(byCtrl).map(Number).sort(function(a,b){return a-b;});
+  for (var ki=0;ki<keys.length;ki++) {
+    var r = byCtrl[keys[ki]];
+    if (r.minProg===0&&r.minReal===0&&r.minExtra===0) continue;
+    var pct = r.minProg>0 ? Math.round(r.minReal/r.minProg*100) : null;
+    var pctColor = pct===null?"#666":pct>=90?"#14532d":pct>=60?"#78350f":"#7f1d1d";
+    w.document.write('<tr><td class="num" style="color:#0a4f2e">' + r.sectorN + '</td>');
+    w.document.write('<td>' + r.sectorName + '</td>');
+    w.document.write('<td class="num">' + r.minProg + '</td>');
+    w.document.write('<td class="num" style="color:' + pctColor + '">' + r.minReal + '</td>');
+    w.document.write('<td><span style="color:' + pctColor + ';font-weight:700">' + (pct!==null?pct+"%":"—") + '</span>');
+    if (pct!==null) w.document.write('<div class="bar-wrap"><div class="bar-fill" style="width:'+Math.min(100,pct)+'%;background:'+pctColor+'"></div></div>');
+    w.document.write('</td>');
+    w.document.write('<td class="num">' + (r.extraCount||"—") + '</td>');
+    w.document.write('<td class="num" style="color:#78350f">' + (r.minExtra||"—") + '</td>');
+    w.document.write('<td class="num">' + (r.extraManguera||"—") + '</td></tr>');
+  }
+  w.document.write('</tbody></table>');
+
+  // Detalle riegos extra
+  var allExtras = [];
+  for (var ki2=0;ki2<keys.length;ki2++) { var r2=byCtrl[keys[ki2]]; for(var xi2=0;xi2<r2.detalle.length;xi2++) allExtras.push({ctrl:r2,ex:r2.detalle[xi2]}); }
+  if (allExtras.length > 0) {
+    w.document.write('<h2>Riegos extra del período</h2>');
+    w.document.write('<table><thead><tr><th>Día</th><th>Controlador</th><th>Motivo</th><th>Método</th><th>Min.</th><th>Zonas</th><th>Notas</th></tr></thead><tbody>');
+    for (var ai=0;ai<allExtras.length;ai++) {
+      var ae=allExtras[ai];
+      var mIcon=ae.ex.motivo==="helada"?"❄️":ae.ex.motivo==="calor"?"🔥":"➕";
+      var metIcon=ae.ex.metodo==="manguera"?"🪣 manguera":"💧 sistema";
+      var zonasTxt=(ae.ex.zonas||[]).map(function(z){return"Z"+z.id+" "+z.min+"min";}).join(", ");
+      w.document.write('<tr><td style="white-space:nowrap">'+ae.ex.dia+'</td><td>N°'+ae.ctrl.sectorN+' '+ae.ctrl.sectorName+'</td>');
+      w.document.write('<td>'+mIcon+' '+(ae.ex.motivo||"otro")+'</td><td>'+metIcon+'</td>');
+      w.document.write('<td class="num">'+ae.ex.dur+'</td><td style="font-size:9px">'+zonasTxt+'</td><td style="font-size:9px">'+(ae.ex.notas||"")+'</td></tr>');
+    }
+    w.document.write('</tbody></table>');
+  }
+
+  w.document.write('<div class="footer">PMR EE · Áreas Verdes · Estadio Español · Generado el ' + new Date().toLocaleString("es-CL") + '</div>');
+  w.document.write('<br><div style="text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#0a4f2e;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">🖨 Imprimir / PDF</button></div>');
+  w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
+
+
+/* ==============================================
+   TAREAS JARDINERO (nodo compartido Firebase)
+   Nodo: tareas_jardinero/
+   Se crea automáticamente cuando riego extra = manguera
+   También accesible por Estadio Verde desde el mismo Firebase
+============================================== */
+var TAREAS = []; // cargadas de Firebase
+
+function saveTareaJardinero(extra, dateStr) {
+  if (extra.metodo !== "manguera") return;
+
+  var motivoLabel = {
+    helada: "❄️ Helada", calor: "🔥 Calor extremo",
+    reparacion: "🔧 Sistema en reparación", evento: "⛔ Evento / cancha ocupada", otro: "➕ Otro"
+  }[extra.motivo] || extra.motivo;
+
+  var zonasDesc = (extra.zonas || []).map(function(z){
+    return "Z" + z.id + (z.label ? " " + z.label.replace(/^Z[^\s]+\s*/,"").slice(0,20) : "") + " · " + z.min + " min";
+  }).join("\n");
+
+  var tarea = {
+    id:          extra.id,
+    origen:      "PMR EE",
+    tipo:        "riego_manual",
+    fecha:       dateStr,
+    fechaISO:    dateToISO(dateStr),
+    hora:        minToHHMM(extra.start),
+    controlador: "N°" + extra.sectorN + " " + extra.sectorName,
+    motivo:      motivoLabel,
+    metodo:      "🪣 Manguera manual",
+    duracion:    extra.dur + " min",
+    zonas:       zonasDesc,
+    notas:       extra.notas || "",
+    estado:      "pendiente",
+    creadoEn:    new Date().toISOString(),
+    creadoPor:   "PMR EE"
+  };
+
+  // Escribir en nodo tareas_jardinero del Firebase
+  fetch(FB_URL.replace(".json", "/tareas_jardinero/" + extra.id + ".json?auth=" + FB_SECRET), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(tarea)
+  })
+  .then(function(r) {
+    if (r.ok) {
+      showSyncBadge("✓ Tarea creada para supervisor");
+      TAREAS.push(tarea);
+      buildTareasPanel();
+      // Mostrar modal de notificación al supervisor
+      abrirModalNotifSupervisor(tarea);
+    } else {
+      showSyncBadge("⚠ Error al crear tarea");
+    }
+  })
+  .catch(function() { showSyncBadge("⚠ Sin conexión"); });
+}
+
+function abrirModalNotifSupervisor(tarea) {
+  // Construir mensaje detallado para el supervisor
+  var zonaLines = tarea.zonas ? tarea.zonas.split("\n") : [];
+  var zonasWsp  = zonaLines.map(function(z){ return "    • " + z; }).join("\n");
+
+  var msg = [
+    "*PMR EE · Estadio Español*",
+    "_Tarea de riego manual — requiere asignación_",
+    "",
+    "🪣 *RIEGO CON MANGUERA*",
+    "📅 Fecha: " + tarea.fecha,
+    "⏰ Hora: " + tarea.hora,
+    "📍 Sector: " + tarea.controlador,
+    "⏱ Duración: " + tarea.duracion,
+    "Motivo: " + tarea.motivo,
+    "",
+    "*Zonas a regar:*",
+    zonasWsp,
+    tarea.notas ? "\n📝 " + tarea.notas : "",
+    "",
+    "_Por favor asigna esta tarea al jardinero correspondiente en Estadio Verde._",
+    "_Generado por PMR EE · " + new Date().toLocaleString("es-CL") + "_"
+  ].filter(function(l){ return l !== undefined; }).join("\n");
+
+  var modal = document.getElementById("notif-supervisor-modal");
+  if (modal) {
+    document.getElementById("notif-sup-text").value = msg;
+    modal.style.display = "flex";
+  }
+}
+
+function cerrarModalNotifSupervisor() {
+  var modal = document.getElementById("notif-supervisor-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function enviarWspSupervisor() {
+  var msg = document.getElementById("notif-sup-text").value;
+  window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+}
+
+function copiarMsgSupervisor() {
+  var msg = document.getElementById("notif-sup-text").value;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(msg).then(function(){
+      var btn = document.getElementById("btn-copiar-sup");
+      if (btn) { btn.textContent = "✓ Copiado"; setTimeout(function(){ btn.textContent = "📋 Copiar"; }, 2000); }
+    });
+  }
+}
+
+function deleteTareaJardinero(tareaId) {
+  fetch(FB_URL.replace(".json", "/tareas_jardinero/" + tareaId + ".json?auth=" + FB_SECRET), {
+    method: "DELETE"
+  })
+  .then(function(r) {
+    if (r.ok) {
+      TAREAS = TAREAS.filter(function(t){ return t.id !== tareaId; });
+      buildTareasPanel();
+      showSyncBadge("✓ Tarea eliminada");
+    }
+  })
+  .catch(function() {});
+}
+
+function marcarTareaCompletada(tareaId) {
+  var tarea = null;
+  for (var i = 0; i < TAREAS.length; i++) {
+    if (TAREAS[i].id === tareaId) { tarea = TAREAS[i]; break; }
+  }
+  if (!tarea) return;
+  tarea.estado = "completada";
+  tarea.completadoEn = new Date().toISOString();
+
+  fetch(FB_URL.replace(".json", "/tareas_jardinero/" + tareaId + ".json?auth=" + FB_SECRET), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estado: "completada", completadoEn: tarea.completadoEn })
+  })
+  .then(function(r) {
+    if (r.ok) { buildTareasPanel(); showSyncBadge("✓ Tarea marcada completada"); }
+  })
+  .catch(function() {});
+}
+
+function loadTareasJardinero(callback) {
+  fetch(FB_URL.replace(".json", "/tareas_jardinero.json?auth=" + FB_SECRET))
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    TAREAS = [];
+    if (data && typeof data === "object") {
+      var keys = Object.keys(data);
+      for (var i = 0; i < keys.length; i++) {
+        if (data[keys[i]]) TAREAS.push(data[keys[i]]);
+      }
+      // Ordenar por fecha desc
+      TAREAS.sort(function(a,b){ return (b.fechaISO||"") > (a.fechaISO||"") ? 1 : -1; });
+    }
+    if (callback) callback();
+  })
+  .catch(function(){ if (callback) callback(); });
+}
+
+function buildTareasPanel() {
+  var panel = document.getElementById("tareas-jardinero-panel");
+  if (!panel) return;
+
+  // Actualizar label de última sincronización
+  var syncLabel = document.getElementById("tareas-sync-label");
+  if (syncLabel) {
+    syncLabel.textContent = "Sync " + new Date().toLocaleTimeString("es-CL", {hour:"2-digit", minute:"2-digit"});
+  }
+
+  var pendientes = TAREAS.filter(function(t){ return t.estado !== "completada"; });
+  var completadas = TAREAS.filter(function(t){ return t.estado === "completada"; });
+
+  // Update badge on PMR tab
+  var badge = document.getElementById("tareas-badge");
+  if (badge) {
+    badge.textContent = pendientes.length > 0 ? " " + pendientes.length : "";
+    badge.style.display = pendientes.length > 0 ? "inline-block" : "none";
+  }
+
+  if (TAREAS.length === 0) {
+    panel.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);padding:12px 0">Sin tareas de riego manual registradas.</div>';
+    return;
+  }
+
+  var html = "";
+
+  if (pendientes.length > 0) {
+    html += '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--amber);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">⏳ Pendientes (' + pendientes.length + ')</div>';
+    for (var i = 0; i < pendientes.length; i++) {
+      html += buildTareaCard(pendientes[i], false);
+    }
+  }
+
+  if (completadas.length > 0) {
+    html += '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px">✅ Completadas (' + completadas.length + ')</div>';
+    for (var i = 0; i < Math.min(completadas.length, 5); i++) {
+      html += buildTareaCard(completadas[i], true);
+    }
+    if (completadas.length > 5) {
+      html += '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);padding:4px">... y ' + (completadas.length-5) + ' más completadas</div>';
+    }
+  }
+
+  panel.innerHTML = html;
+}
+
+function buildTareaCard(t, completada) {
+  var html = '<div style="background:var(--panel);border:1px solid ' + (completada ? "var(--border)" : "var(--amber)40") + ';border-radius:10px;padding:12px 14px;margin-bottom:8px;opacity:' + (completada ? "0.6" : "1") + '">';
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">';
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="font-weight:700;font-size:0.82rem;margin-bottom:3px">🪣 ' + t.controlador + '</div>';
+  html += '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);margin-bottom:4px">';
+  html += t.fecha + ' · ' + t.hora + ' · ' + t.duracion + ' · ' + t.motivo;
+  html += '</div>';
+  if (t.zonas) {
+    var zonaLines = t.zonas.split("\n");
+    html += '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--blue)">';
+    html += zonaLines.join(" · ");
+    html += '</div>';
+  }
+  if (t.notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:3px">' + t.notas + '</div>';
+  html += '</div>';
+  if (!completada && (currentRole === "admin" || currentRole === "operador")) {
+    html += '<div style="display:flex;gap:5px;flex-shrink:0">';
+    html += '<button onclick="marcarTareaCompletada(' + t.id + ')" style="padding:4px 10px;background:#14532d;color:#86efac;border:none;border-radius:6px;font-family:var(--font-mono);font-size:0.65rem;cursor:pointer;white-space:nowrap">✓ Hecho</button>';
+    html += '<button onclick="deleteTareaJardinero(' + t.id + ')" style="padding:4px 8px;background:none;border:1px solid #dc262640;border-radius:6px;color:var(--red);font-size:0.65rem;cursor:pointer">✕</button>';
+    html += '</div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
 
 </script>
 
