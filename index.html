@@ -2401,8 +2401,13 @@ function buildPMR() {
     div("stat-card", lbl("Controladores") + val("v-amber", sCount) + sub("con riego")) +
     div("stat-card", lbl("Clave WiFi riego") + val("v-green", "4855") + sub("monitoreo: Sí"));
 
-  buildDateNav();
-  buildScheduleForDate(currentDateIdx);
+  // Diferir renders pesados para que iOS Safari no colapse
+  requestAnimationFrame(function() {
+    buildDateNav();
+    requestAnimationFrame(function() {
+      buildScheduleForDate(currentDateIdx);
+    });
+  });
 }
 function div(cls, inner) { return '<div class="' + cls + '">' + inner + '</div>'; }
 function lbl(t) { return '<div class="label">' + t + '</div>'; }
@@ -5027,19 +5032,31 @@ function doLogin() {
       dayBtns[i].addEventListener("click", function() { toggleDay(this); });
     }
     currentDateIdx = findTodayIndex();
+
+    // Escalonar inicializaciones para evitar sobrecarga en iOS Safari
     buildPMR();
-    buildWifi();
-    updateConflictBadge();
-    // Forzar rebuild de controladores con datos actualizados
-    if (document.getElementById("pane-controladores").classList.contains("active")) buildControllers();
-    // Obtener clima en background para mostrar banner de alertas
-    climaAutoFetch();
-    // Cargar tareas del jardinero
-    loadTareasJardinero(buildTareasPanel);
-    // Auto-actualizar tareas cada 2 minutos (sincronización con Estadio Verde)
-    setInterval(function() {
+
+    setTimeout(function() {
+      buildWifi();
+      updateConflictBadge();
+    }, 300);
+
+    setTimeout(function() {
+      // Clima en background — aparece banner de alertas
+      climaAutoFetch();
+    }, 800);
+
+    setTimeout(function() {
+      // Tareas del jardinero
       loadTareasJardinero(buildTareasPanel);
-    }, 2 * 60 * 1000);
+    }, 1500);
+
+    setTimeout(function() {
+      // Polling cada 2 minutos — sincronización con Estadio Verde
+      setInterval(function() {
+        loadTareasJardinero(buildTareasPanel);
+      }, 2 * 60 * 1000);
+    }, 2000);
   });
 }
 
