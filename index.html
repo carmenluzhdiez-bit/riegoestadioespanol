@@ -4390,6 +4390,7 @@ function saveToStorage() {
     dates: DATES,
     pumpGroups: PUMP_GROUPS,
     history: HISTORY,
+    climaThresholds: CLIMA_THRESHOLDS,
     savedAt: new Date().toISOString()
   };
   fetch(FB_URL + ".json?auth=" + FB_SECRET, {
@@ -4412,6 +4413,10 @@ function loadFromStorage(callback) {
       CONTROLLERS = data.controllers;
       PROGRAMS    = data.programs    || PROGRAMS;
       TEMPLATES   = data.templates   || TEMPLATES;
+      if (data.climaThresholds) {
+        CLIMA_THRESHOLDS.frost = data.climaThresholds.frost !== undefined ? data.climaThresholds.frost : 3;
+        CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat  !== undefined ? data.climaThresholds.heat  : 32;
+      }
       DATES       = data.dates       || DATES;
       if (data.pumpGroups && data.pumpGroups.length > 0) PUMP_GROUPS = data.pumpGroups;
       if (data.history) HISTORY = data.history;
@@ -5108,20 +5113,12 @@ function climaGetWmo(code) {
 }
 
 function climaInit() {
-  // Cargar umbrales guardados
-  var saved = localStorage.getItem("pmr_clima_thresholds");
-  if (saved) {
-    try {
-      var t = JSON.parse(saved);
-      CLIMA_THRESHOLDS.frost = t.frost !== undefined ? t.frost : 3;
-      CLIMA_THRESHOLDS.heat  = t.heat  !== undefined ? t.heat  : 32;
-    } catch(e) {}
-  }
+  // Umbrales ya cargados desde Firebase en loadFromStorage
   document.getElementById("clima-thresh-frost").value = CLIMA_THRESHOLDS.frost;
   document.getElementById("clima-thresh-heat").value  = CLIMA_THRESHOLDS.heat;
 
   if (CLIMA_DATA) {
-    climaRender();  // ya tenemos datos frescos
+    climaRender();
   } else {
     climaFetch();
   }
@@ -5130,15 +5127,18 @@ function climaInit() {
 function climaSaveThresholds() {
   CLIMA_THRESHOLDS.frost = parseFloat(document.getElementById("clima-thresh-frost").value) || 3;
   CLIMA_THRESHOLDS.heat  = parseFloat(document.getElementById("clima-thresh-heat").value)  || 32;
-  localStorage.setItem("pmr_clima_thresholds", JSON.stringify(CLIMA_THRESHOLDS));
+  // Guardar en Firebase (no localStorage — compatible con iOS Safari y modo standalone)
+  saveToStorage();
   if (CLIMA_DATA) climaRender();
-  var btn = document.querySelector("#pane-clima button[onclick=\'climaSaveThresholds()\']");
-  // simple feedback
+  // Feedback visual
   var el = document.querySelector("#pane-clima .section-title");
-  var savedMsg = document.createElement("span");
-  savedMsg.textContent = " ✓ Guardado";
-  savedMsg.style.cssText = "font-family:var(--font-mono);font-size:0.72rem;color:var(--green);margin-left:8px";
-  if (el) { el.appendChild(savedMsg); setTimeout(function(){ savedMsg.remove(); }, 2000); }
+  if (el) {
+    var savedMsg = document.createElement("span");
+    savedMsg.textContent = " ✓ Guardado";
+    savedMsg.style.cssText = "font-family:var(--font-mono);font-size:0.72rem;color:var(--green);margin-left:8px";
+    el.appendChild(savedMsg);
+    setTimeout(function(){ savedMsg.remove(); }, 2500);
+  }
 }
 
 function climaFetch() {
@@ -5393,9 +5393,7 @@ function climaAutoFetch() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       CLIMA_DATA = data;
-      // Cargar umbrales guardados antes de evaluar
-      var saved = localStorage.getItem("pmr_clima_thresholds");
-      if (saved) { try { var t = JSON.parse(saved); CLIMA_THRESHOLDS.frost = t.frost || 3; CLIMA_THRESHOLDS.heat = t.heat || 32; } catch(e){} }
+      // Umbrales ya cargados desde Firebase — evaluar alertas directamente
       climaEvalAlerts();
     })
     .catch(function(){});  // silencioso si falla
