@@ -4407,7 +4407,7 @@ function saveToStorage() {
 
 function saveClimaThresholds() {
   // Guardar umbrales en nodo separado — accesible para cualquier rol (Admin u Operador)
-  fetch(FB_URL.replace(".json", "/climaThresholds.json?auth=" + FB_SECRET), {
+  fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(CLIMA_THRESHOLDS)
@@ -4432,7 +4432,7 @@ function loadFromStorage(callback) {
         CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat  !== undefined ? data.climaThresholds.heat  : 32;
       } else {
         // Intentar cargar desde nodo dedicado (guardado por Operador)
-        fetch(FB_URL.replace(".json", "/climaThresholds.json?auth=" + FB_SECRET))
+        fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET)
           .then(function(r2){ return r2.json(); })
           .then(function(t){
             if (t && t.frost !== undefined) CLIMA_THRESHOLDS.frost = t.frost;
@@ -6289,7 +6289,7 @@ function saveTareaJardinero(extra, dateStr) {
   };
 
   // Escribir en nodo tareas_jardinero del Firebase
-  fetch(FB_URL.replace(".json", "/tareas_jardinero/" + extra.id + ".json?auth=" + FB_SECRET), {
+  fetch(FB_URL + "/tareas_jardinero/" + extra.id + ".json?auth=" + FB_SECRET, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(tarea)
@@ -6360,7 +6360,7 @@ function copiarMsgSupervisor() {
 }
 
 function deleteTareaJardinero(tareaId) {
-  fetch(FB_URL.replace(".json", "/tareas_jardinero/" + tareaId + ".json?auth=" + FB_SECRET), {
+  fetch(FB_URL + "/tareas_jardinero/" + tareaId + ".json?auth=" + FB_SECRET, {
     method: "DELETE"
   })
   .then(function(r) {
@@ -6382,7 +6382,7 @@ function marcarTareaCompletada(tareaId) {
   tarea.estado = "completada";
   tarea.completadoEn = new Date().toISOString();
 
-  fetch(FB_URL.replace(".json", "/tareas_jardinero/" + tareaId + ".json?auth=" + FB_SECRET), {
+  fetch(FB_URL + "/tareas_jardinero/" + tareaId + ".json?auth=" + FB_SECRET, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ estado: "completada", completadoEn: tarea.completadoEn })
@@ -6394,7 +6394,7 @@ function marcarTareaCompletada(tareaId) {
 }
 
 function loadTareasJardinero(callback) {
-  fetch(FB_URL.replace(".json", "/tareas_jardinero.json?auth=" + FB_SECRET))
+  fetch(FB_URL + "/tareas_jardinero.json?auth=" + FB_SECRET)
   .then(function(r){ return r.json(); })
   .then(function(data) {
     TAREAS = [];
