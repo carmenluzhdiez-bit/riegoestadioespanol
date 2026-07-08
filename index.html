@@ -4405,6 +4405,20 @@ function saveToStorage() {
   .catch(function() { showSyncBadge("⚠ Sin conexión"); });
 }
 
+function saveClimaThresholds() {
+  // Guardar umbrales en nodo separado — accesible para cualquier rol (Admin u Operador)
+  fetch(FB_URL.replace(".json", "/climaThresholds.json?auth=" + FB_SECRET), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(CLIMA_THRESHOLDS)
+  })
+  .then(function(r) {
+    if (r.ok) showSyncBadge("✓ Umbrales guardados");
+    else showSyncBadge("⚠ Error al guardar");
+  })
+  .catch(function() { showSyncBadge("⚠ Sin conexión"); });
+}
+
 function loadFromStorage(callback) {
   fetch(FB_URL + ".json?auth=" + FB_SECRET)
   .then(function(r) { return r.json(); })
@@ -4416,6 +4430,15 @@ function loadFromStorage(callback) {
       if (data.climaThresholds) {
         CLIMA_THRESHOLDS.frost = data.climaThresholds.frost !== undefined ? data.climaThresholds.frost : 3;
         CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat  !== undefined ? data.climaThresholds.heat  : 32;
+      } else {
+        // Intentar cargar desde nodo dedicado (guardado por Operador)
+        fetch(FB_URL.replace(".json", "/climaThresholds.json?auth=" + FB_SECRET))
+          .then(function(r2){ return r2.json(); })
+          .then(function(t){
+            if (t && t.frost !== undefined) CLIMA_THRESHOLDS.frost = t.frost;
+            if (t && t.heat  !== undefined) CLIMA_THRESHOLDS.heat  = t.heat;
+          })
+          .catch(function(){});
       }
       DATES       = data.dates       || DATES;
       if (data.pumpGroups && data.pumpGroups.length > 0) PUMP_GROUPS = data.pumpGroups;
@@ -5127,8 +5150,10 @@ function climaInit() {
 function climaSaveThresholds() {
   CLIMA_THRESHOLDS.frost = parseFloat(document.getElementById("clima-thresh-frost").value) || 3;
   CLIMA_THRESHOLDS.heat  = parseFloat(document.getElementById("clima-thresh-heat").value)  || 32;
-  // Guardar en Firebase (no localStorage — compatible con iOS Safari y modo standalone)
-  saveToStorage();
+  // Guardar en nodo dedicado Firebase — funciona para cualquier rol
+  saveClimaThresholds();
+  // Si es admin, también actualizar el nodo principal
+  if (currentRole === "admin") saveToStorage();
   if (CLIMA_DATA) climaRender();
   // Feedback visual
   var el = document.querySelector("#pane-clima .section-title");
