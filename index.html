@@ -4428,8 +4428,10 @@ function loadFromStorage(callback) {
   fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET)
     .then(function(r2){ return r2.json(); })
     .then(function(t){
-      if (t && t.frost !== undefined) CLIMA_THRESHOLDS.frost = t.frost;
-      if (t && t.heat  !== undefined) CLIMA_THRESHOLDS.heat  = t.heat;
+      if (t && typeof t === "object") {
+        if (t.frost !== undefined && t.frost !== null) CLIMA_THRESHOLDS.frost = t.frost;
+        if (t.heat  !== undefined && t.heat  !== null) CLIMA_THRESHOLDS.heat  = t.heat;
+      }
     })
     .catch(function(){})
     .then(function(){
@@ -4444,8 +4446,8 @@ function loadFromStorage(callback) {
         TEMPLATES   = data.templates   || TEMPLATES;
         // Solo usar climaThresholds del nodo principal si el nodo dedicado estaba vacío
         if (data.climaThresholds && CLIMA_THRESHOLDS.frost === 3 && CLIMA_THRESHOLDS.heat === 32) {
-          CLIMA_THRESHOLDS.frost = data.climaThresholds.frost !== undefined ? data.climaThresholds.frost : 3;
-          CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat  !== undefined ? data.climaThresholds.heat  : 32;
+          if (data.climaThresholds.frost !== undefined) CLIMA_THRESHOLDS.frost = data.climaThresholds.frost;
+          if (data.climaThresholds.heat  !== undefined) CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat;
         }
         DATES       = data.dates       || DATES;
       if (data.pumpGroups && data.pumpGroups.length > 0) PUMP_GROUPS = data.pumpGroups;
@@ -5155,8 +5157,10 @@ function climaInit() {
 }
 
 function climaSaveThresholds() {
-  CLIMA_THRESHOLDS.frost = parseFloat(document.getElementById("clima-thresh-frost").value) || 3;
-  CLIMA_THRESHOLDS.heat  = parseFloat(document.getElementById("clima-thresh-heat").value)  || 32;
+  var frostVal = document.getElementById("clima-thresh-frost").value;
+  var heatVal  = document.getElementById("clima-thresh-heat").value;
+  CLIMA_THRESHOLDS.frost = frostVal !== "" ? parseFloat(frostVal) : 3;
+  CLIMA_THRESHOLDS.heat  = heatVal  !== "" ? parseFloat(heatVal)  : 32;
   // Guardar en nodo dedicado Firebase — funciona para cualquier rol
   saveClimaThresholds();
   // Si es admin, también actualizar el nodo principal
