@@ -4399,7 +4399,11 @@ function saveToStorage() {
     body: JSON.stringify(data)
   })
   .then(function(r) {
-    if (r.ok) showSyncBadge("✓ Sincronizado");
+    if (r.ok) {
+      showSyncBadge("✓ Sincronizado");
+      // También actualizar nodo dedicado de umbrales para consistencia
+      saveClimaThresholds();
+    }
     else showSyncBadge("⚠ Error " + r.status);
   })
   .catch(function() { showSyncBadge("⚠ Sin conexión"); });
@@ -4420,27 +4424,30 @@ function saveClimaThresholds() {
 }
 
 function loadFromStorage(callback) {
-  fetch(FB_URL + ".json?auth=" + FB_SECRET)
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data && data.controllers) {
-      CONTROLLERS = data.controllers;
-      PROGRAMS    = data.programs    || PROGRAMS;
-      TEMPLATES   = data.templates   || TEMPLATES;
-      if (data.climaThresholds) {
-        CLIMA_THRESHOLDS.frost = data.climaThresholds.frost !== undefined ? data.climaThresholds.frost : 3;
-        CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat  !== undefined ? data.climaThresholds.heat  : 32;
-      } else {
-        // Intentar cargar desde nodo dedicado (guardado por Operador)
-        fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET)
-          .then(function(r2){ return r2.json(); })
-          .then(function(t){
-            if (t && t.frost !== undefined) CLIMA_THRESHOLDS.frost = t.frost;
-            if (t && t.heat  !== undefined) CLIMA_THRESHOLDS.heat  = t.heat;
-          })
-          .catch(function(){});
-      }
-      DATES       = data.dates       || DATES;
+  // Primero cargar umbrales desde nodo dedicado (siempre tiene prioridad)
+  fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET)
+    .then(function(r2){ return r2.json(); })
+    .then(function(t){
+      if (t && t.frost !== undefined) CLIMA_THRESHOLDS.frost = t.frost;
+      if (t && t.heat  !== undefined) CLIMA_THRESHOLDS.heat  = t.heat;
+    })
+    .catch(function(){})
+    .then(function(){
+      // Luego cargar el resto de los datos
+      return fetch(FB_URL + ".json?auth=" + FB_SECRET);
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data && data.controllers) {
+        CONTROLLERS = data.controllers;
+        PROGRAMS    = data.programs    || PROGRAMS;
+        TEMPLATES   = data.templates   || TEMPLATES;
+        // Solo usar climaThresholds del nodo principal si el nodo dedicado estaba vacío
+        if (data.climaThresholds && CLIMA_THRESHOLDS.frost === 3 && CLIMA_THRESHOLDS.heat === 32) {
+          CLIMA_THRESHOLDS.frost = data.climaThresholds.frost !== undefined ? data.climaThresholds.frost : 3;
+          CLIMA_THRESHOLDS.heat  = data.climaThresholds.heat  !== undefined ? data.climaThresholds.heat  : 32;
+        }
+        DATES       = data.dates       || DATES;
       if (data.pumpGroups && data.pumpGroups.length > 0) PUMP_GROUPS = data.pumpGroups;
       if (data.history) HISTORY = data.history;
       WIFI_SECTORS = CONTROLLERS.map(function(c) {
