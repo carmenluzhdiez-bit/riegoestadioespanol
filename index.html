@@ -2269,7 +2269,6 @@ function getProjectedEntries(idx) {
   for (var i = 0; i < PROGRAMS.length; i++) {
     var p = PROGRAMS[i];
     if (programRunsOnDate(p, idx)) {
-      // Deep copy zonas con estado ejecutado
       var zonas = [];
       if (p.zonasConMin && p.zonasConMin.length > 0) {
         for (var zi = 0; zi < p.zonasConMin.length; zi++) {
@@ -2285,7 +2284,32 @@ function getProjectedEntries(idx) {
       });
     }
   }
-  entries.sort(function(a,b){ return a.start - b.start; });
+
+  // Ordenar: primero por hora de inicio, luego por letra de programa (A antes que B)
+  entries.sort(function(a, b) {
+    if (a.start !== b.start) return a.start - b.start;
+    return (a.programa || "").localeCompare(b.programa || "");
+  });
+
+  // Recalcular inicio secuencial para programas del mismo controlador que coinciden en hora:
+  // si dos programas del mismo sector tienen el mismo start, el segundo empieza cuando termina el primero
+  var lastEndByCtrl = {}; // sectorN → minuto en que termina el último programa
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    var sn = e.sectorN;
+    if (lastEndByCtrl[sn] !== undefined && e.start < lastEndByCtrl[sn]) {
+      // Solapamiento con programa anterior del mismo controlador → encolar
+      e.start = lastEndByCtrl[sn];
+    }
+    lastEndByCtrl[sn] = e.start + e.dur;
+  }
+
+  // Re-ordenar después del ajuste (el encole puede cambiar el orden global)
+  entries.sort(function(a, b) {
+    if (a.start !== b.start) return a.start - b.start;
+    return (a.programa || "").localeCompare(b.programa || "");
+  });
+
   return entries;
 }
 
@@ -4617,7 +4641,29 @@ function getEventsForDate(idx) {
       if (programRunsOnDate(PROGRAMS[i], idx)) events.push(PROGRAMS[i]);
     }
   }
-  events.sort(function(a,b){ return (a.start||0) - (b.start||0); });
+  events.sort(function(a,b){
+    if ((a.start||0) !== (b.start||0)) return (a.start||0) - (b.start||0);
+    return (a.programa||"").localeCompare(b.programa||"");
+  });
+
+  // Recalcular inicio secuencial para programas del mismo controlador que se solapan
+  var lastEndByCtrl = {};
+  for (var si = 0; si < events.length; si++) {
+    var ev = events[si];
+    if (ev._isExtra) continue;
+    var sn = ev.sectorN;
+    if (lastEndByCtrl[sn] !== undefined && (ev.start||0) < lastEndByCtrl[sn]) {
+      ev.start = lastEndByCtrl[sn];
+    }
+    lastEndByCtrl[sn] = (ev.start||0) + (ev.durReal || ev.dur || 0);
+  }
+
+  // Re-ordenar tras el ajuste
+  events.sort(function(a,b){
+    if ((a.start||0) !== (b.start||0)) return (a.start||0) - (b.start||0);
+    return (a.programa||"").localeCompare(b.programa||"");
+  });
+
   // Agregar riegos extra si existen
   var extras = (HISTORY[DATES[idx]] && HISTORY[DATES[idx]].extras) ? HISTORY[DATES[idx]].extras : [];
   for (var xi = 0; xi < extras.length; xi++) {
