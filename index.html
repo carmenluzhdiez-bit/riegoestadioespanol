@@ -3000,16 +3000,15 @@ function onControllerChange() {
     var on = (letter === selectedPrograma) ? " on" : "";
     pgBtns += '<button class="pg-btn' + on + '" onclick="selectPrograma(\'' + letter + '\',this)">' + pg.pg + '</button>';
   }
-  // Also allow new custom program
   pgBtns += '<button class="pg-btn" onclick="selectPrograma(\'NUEVO\',this)" style="color:var(--green)">+ Nuevo</button>';
   document.getElementById("ed-programa-btns").innerHTML = pgBtns;
 
-  // Show desc of selected programa
   updateProgramaDesc(ctrl);
-  // Build zonas checkboxes
   buildZonasCheckboxes(ctrl);
-  // Pre-fill time from selected programa
-  prefillFromPrograma(ctrl);
+  // Solo pre-llenar desde programa base si NO estamos editando un programa existente
+  if (!editingId) {
+    prefillFromPrograma(ctrl);
+  }
 }
 
 function selectPrograma(letter, btn) {
@@ -3472,18 +3471,27 @@ function editProgram(id) {
   var btn = document.querySelector("#pane-editor .btn-primary");
   if (btn) btn.textContent = "Guardar cambios";
 
-  // Select controller
+  // Select controller — llamar onControllerChange ANTES de setear selectedPrograma
   var sel = document.getElementById("ed-sector");
   if (sel) sel.value = p.sectorN;
   onControllerChange();
 
-  // Select programa button
-  var pgBtns = document.querySelectorAll("#ed-programa-btns .pg-btn");
+  // Restaurar nombre y letra del programa DESPUÉS de onControllerChange (que puede resetearlos)
   selectedPrograma = p.programa || "A";
+
+  // Restaurar el campo de texto con el nombre del programa
+  var nombreEl = document.getElementById("ed-prog-nombre");
+  if (nombreEl) nombreEl.value = p.programa || "";
+
+  // Activar el botón de programa correspondiente
+  var pgBtns = document.querySelectorAll("#ed-programa-btns .pg-btn");
   for (var i = 0; i < pgBtns.length; i++) {
     pgBtns[i].classList.remove("on");
-    if (pgBtns[i].textContent.trim() === selectedPrograma ||
-        pgBtns[i].textContent.trim() === "+ Nuevo" && selectedPrograma === "NUEVO") {
+    var btnText = pgBtns[i].textContent.trim();
+    // Comparar con la primera letra del programa (A, B, C) o con el texto exacto
+    var firstLetter = (p.programa || "").charAt(0).toUpperCase();
+    if (btnText === p.programa || btnText === firstLetter ||
+        (btnText === "+ Nuevo" && p.programa && !["A","B","C","D"].includes(p.programa.charAt(0).toUpperCase()))) {
       pgBtns[i].classList.add("on");
     }
   }
