@@ -1033,6 +1033,7 @@
       <button onclick="buildControllers()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🔄 Actualizar</button>
       <button onclick="printControllersReport()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">🖨 Vista actual</button>
       <button onclick="openCtrlPrintModal()" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer">☑ Seleccionar</button>
+      <button onclick="imprimirEtiquetas()" style="padding:5px 12px;background:#14532d;color:#86efac;border:1px solid #16a34a;border-radius:7px;font-family:var(--font-mono);font-size:0.65rem;font-weight:700;cursor:pointer">🏷 Etiquetas A4</button>
     </div>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
@@ -6556,6 +6557,144 @@ function buildTareaCard(t, completada) {
     html += '</div>';
   }
   html += '</div></div>';
+  return html;
+}
+
+
+/* ==============================================
+   ETIQUETAS DE CONTROLADORES — A4 (6 por hoja)
+============================================== */
+function imprimirEtiquetas() {
+  var fecha = new Date().toLocaleDateString("es-CL", { day:"numeric", month:"long", year:"numeric" });
+  var w = window.open("", "_blank");
+  if (!w) { alert("Permite ventanas emergentes para imprimir etiquetas."); return; }
+
+  var css = [
+    "*{ box-sizing:border-box; margin:0; padding:0; font-family:Arial, sans-serif; }",
+    "body{ background:#fff; }",
+    ".page{ width:210mm; min-height:297mm; padding:8mm; display:grid;",
+    "  grid-template-columns:1fr 1fr; grid-template-rows: repeat(3,auto);",
+    "  gap:6mm; page-break-after:always; }",
+    ".etiqueta{ border:1.5px solid #0a4f2e; border-radius:4mm; padding:4mm 5mm;",
+    "  overflow:hidden; display:flex; flex-direction:column; gap:2mm;",
+    "  break-inside:avoid; min-height:90mm; max-height:93mm; }",
+    ".et-header{ display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid #0a4f2e; padding-bottom:2mm; margin-bottom:1mm; }",
+    ".et-num{ font-size:22pt; font-weight:900; color:#0a4f2e; line-height:1; }",
+    ".et-nombre{ font-size:11pt; font-weight:700; color:#111; flex:1; padding-left:3mm; line-height:1.2; }",
+    ".et-fecha{ font-size:6pt; color:#999; text-align:right; white-space:nowrap; }",
+    ".et-section{ font-size:6pt; font-weight:700; color:#0a4f2e; text-transform:uppercase; letter-spacing:.06em; margin:1mm 0 0.5mm; }",
+    ".prog-row{ display:flex; align-items:baseline; gap:2mm; margin-bottom:0.8mm; }",
+    ".prog-badge{ background:#0a4f2e; color:#fff; font-size:7pt; font-weight:700; padding:0.3mm 2mm; border-radius:1mm; flex-shrink:0; }",
+    ".prog-hora{ font-size:8pt; font-weight:700; color:#111; font-family:monospace; flex-shrink:0; }",
+    ".prog-dur{ font-size:7pt; color:#555; flex-shrink:0; }",
+    ".prog-zonas{ font-size:6.5pt; color:#333; flex:1; }",
+    ".zona-row{ display:flex; gap:1.5mm; align-items:baseline; margin-bottom:0.5mm; }",
+    ".zona-num{ font-size:7pt; font-weight:700; color:#1e3a5f; font-family:monospace; flex-shrink:0; min-width:8mm; }",
+    ".zona-desc{ font-size:6.5pt; color:#444; }",
+    ".no-progs{ font-size:7pt; color:#999; font-style:italic; }",
+    "@media print{",
+    "  body{ margin:0; }",
+    "  button{ display:none; }",
+    "  .page{ page-break-after:always; }",
+    "}",
+  ].join("\n");
+
+  // Agrupar controladores en páginas de 6
+  var ctrls = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  var pages = [];
+  for (var i = 0; i < ctrls.length; i += 6) pages.push(ctrls.slice(i, i+6));
+
+  var body = "";
+  for (var pi = 0; pi < pages.length; pi++) {
+    var page = pages[pi];
+    body += '<div class="page">';
+    for (var ci = 0; ci < page.length; ci++) {
+      var c = page[ci];
+      body += buildEtiqueta(c, fecha);
+    }
+    // Rellenar página incompleta con celdas vacías
+    for (var fi = page.length; fi < 6; fi++) {
+      body += '<div class="etiqueta" style="border:1.5px dashed #ddd"></div>';
+    }
+    body += "</div>";
+  }
+
+  // Botón imprimir
+  body += '<div style="text-align:center;padding:20px;font-family:Arial">'
+    + '<button onclick="window.print()" style="padding:10px 28px;background:#0a4f2e;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;margin-right:8px">🖨 Imprimir etiquetas</button>'
+    + '<button onclick="window.close()" style="padding:10px 20px;background:#f1f5f9;border:1px solid #ccc;border-radius:6px;font-size:14px;cursor:pointer">Cerrar</button>'
+    + '<div style="margin-top:8px;font-size:11px;color:#999">Tamaño A4 · 6 etiquetas por hoja · ' + ctrls.length + ' controlador' + (ctrls.length!==1?"es":"") + '</div>'
+    + '</div>';
+
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    + '<title>Etiquetas Controladores — PMR EE</title>'
+    + '<style>' + css + '</style></head><body>' + body + '</body></html>');
+  w.document.close();
+}
+
+function buildEtiqueta(c, fecha) {
+  var html = '<div class="etiqueta">';
+
+  // Header: número, nombre, fecha
+  html += '<div class="et-header">';
+  html += '<div class="et-num">N°' + c.n + '</div>';
+  html += '<div class="et-nombre">' + (c.name || "") + '</div>';
+  html += '<div class="et-fecha">PMR EE<br>' + fecha + '</div>';
+  html += '</div>';
+
+  // Programas activos
+  var progs = PROGRAMS.filter(function(p){ return p.sectorN === c.n; });
+  progs.sort(function(a,b){
+    var pa = (a.programa||"A"); var pb = (b.programa||"A");
+    return pa < pb ? -1 : pa > pb ? 1 : 0;
+  });
+
+  if (progs.length > 0) {
+    html += '<div class="et-section">Programas activos</div>';
+    for (var pi = 0; pi < progs.length; pi++) {
+      var p = progs[pi];
+      var freqStr = "";
+      if (p.freqMode === "dias" && p.days && p.days.length)
+        freqStr = p.days.join("-");
+      else if (p.freqMode === "intervalo" && p.interval)
+        freqStr = "c/" + p.interval + "d";
+      else
+        freqStr = "Manual";
+
+      // Zonas del programa
+      var zonasStr = "";
+      if (p.zonasConMin && p.zonasConMin.length) {
+        zonasStr = p.zonasConMin.map(function(z){
+          return "Z" + z.id + "\u00a0" + z.min + "min";
+        }).join(" · ");
+      }
+
+      html += '<div class="prog-row">';
+      html += '<span class="prog-badge">' + (p.programa||"?") + '</span>';
+      html += '<span class="prog-hora">' + minToHHMM(p.start) + '</span>';
+      html += '<span class="prog-dur">' + p.dur + '\u00a0min\u00a0·\u00a0' + freqStr + '</span>';
+      html += '</div>';
+      if (zonasStr) {
+        html += '<div class="prog-zonas" style="padding-left:2mm;margin-top:-0.5mm;margin-bottom:1mm">' + zonasStr + '</div>';
+      }
+    }
+  } else {
+    html += '<div class="no-progs" style="margin-top:2mm">Sin programas registrados</div>';
+  }
+
+  // Zonas / válvulas del controlador
+  if (c.zonas && c.zonas.length > 0) {
+    html += '<div class="et-section" style="margin-top:1mm">Zonas / Válvulas</div>';
+    for (var zi = 0; zi < c.zonas.length; zi++) {
+      var z = c.zonas[zi];
+      html += '<div class="zona-row">';
+      html += '<span class="zona-num">Z' + z.z + '</span>';
+      html += '<span class="zona-desc">' + (z.desc || "—") + '</span>';
+      html += '</div>';
+    }
+  }
+
+  html += '</div>';
   return html;
 }
 
