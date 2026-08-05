@@ -6634,11 +6634,16 @@ function imprimirEtiquetas() {
 
 function buildEtiqueta(c, fecha) {
   var html = '<div class="etiqueta">';
+  var totalZonas = c.zonas ? c.zonas.length : 0;
+
+  // Compactar espaciado si hay muchas zonas
+  var compact = totalZonas > 8;
+  var veryCompact = totalZonas > 14;
 
   // Header: número, nombre, fecha
-  html += '<div class="et-header">';
-  html += '<div class="et-num">N°' + c.n + '</div>';
-  html += '<div class="et-nombre">' + (c.name || "") + '</div>';
+  html += '<div class="et-header" style="' + (compact ? "padding-bottom:1mm;margin-bottom:0.5mm;" : "") + '">';
+  html += '<div class="et-num" style="' + (compact ? "font-size:18pt;" : "") + '">N°' + c.n + '</div>';
+  html += '<div class="et-nombre" style="' + (compact ? "font-size:10pt;" : "") + '">' + (c.name || "") + '</div>';
   html += '<div class="et-fecha">PMR EE<br>' + fecha + '</div>';
   html += '</div>';
 
@@ -6650,7 +6655,7 @@ function buildEtiqueta(c, fecha) {
   });
 
   if (progs.length > 0) {
-    html += '<div class="et-section">Programas activos</div>';
+    html += '<div class="et-section" style="' + (compact ? "font-size:5.5pt;margin-bottom:0.3mm;" : "") + '">Programas activos</div>';
     for (var pi = 0; pi < progs.length; pi++) {
       var p = progs[pi];
       var freqStr = "";
@@ -6661,36 +6666,55 @@ function buildEtiqueta(c, fecha) {
       else
         freqStr = "Manual";
 
-      // Zonas del programa
+      // Zonas del programa — en línea compacta
       var zonasStr = "";
       if (p.zonasConMin && p.zonasConMin.length) {
         zonasStr = p.zonasConMin.map(function(z){
-          return "Z" + z.id + "\u00a0" + z.min + "min";
+          return "Z" + z.id + "\u00a0" + z.min + "m";
         }).join(" · ");
       }
 
-      html += '<div class="prog-row">';
-      html += '<span class="prog-badge">' + (p.programa||"?") + '</span>';
-      html += '<span class="prog-hora">' + minToHHMM(p.start) + '</span>';
-      html += '<span class="prog-dur">' + p.dur + '\u00a0min\u00a0·\u00a0' + freqStr + '</span>';
+      html += '<div class="prog-row" style="' + (compact ? "margin-bottom:0.3mm;" : "") + '">';
+      html += '<span class="prog-badge" style="' + (compact ? "font-size:6pt;padding:0.2mm 1.5mm;" : "") + '">' + (p.programa||"?") + '</span>';
+      html += '<span class="prog-hora" style="' + (compact ? "font-size:7pt;" : "") + '">' + minToHHMM(p.start) + '</span>';
+      html += '<span class="prog-dur" style="' + (compact ? "font-size:6pt;" : "") + '">' + p.dur + '\u00a0min\u00a0·\u00a0' + freqStr + '</span>';
       html += '</div>';
       if (zonasStr) {
-        html += '<div class="prog-zonas" style="padding-left:2mm;margin-top:-0.5mm;margin-bottom:1mm">' + zonasStr + '</div>';
+        html += '<div class="prog-zonas" style="padding-left:2mm;margin-top:-0.3mm;margin-bottom:' + (compact ? "0.5" : "1") + 'mm;' + (compact ? "font-size:5.5pt;" : "") + '">' + zonasStr + '</div>';
       }
     }
   } else {
-    html += '<div class="no-progs" style="margin-top:2mm">Sin programas registrados</div>';
+    html += '<div class="no-progs" style="margin-top:1mm">Sin programas registrados</div>';
   }
 
-  // Zonas / válvulas del controlador
+  // Zonas / válvulas del controlador — dos columnas cuando hay muchas
   if (c.zonas && c.zonas.length > 0) {
-    html += '<div class="et-section" style="margin-top:1mm">Zonas / Válvulas</div>';
-    for (var zi = 0; zi < c.zonas.length; zi++) {
-      var z = c.zonas[zi];
-      html += '<div class="zona-row">';
-      html += '<span class="zona-num">Z' + z.z + '</span>';
-      html += '<span class="zona-desc">' + (z.desc || "—") + '</span>';
+    html += '<div class="et-section" style="margin-top:' + (compact ? "0.5" : "1") + 'mm;' + (compact ? "font-size:5.5pt;" : "") + '">Zonas / Válvulas</div>';
+
+    if (totalZonas > 6) {
+      // Dos columnas para acomodar muchas zonas
+      var colFontSize = veryCompact ? "5.5pt" : "6.5pt";
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 3mm;">';
+      for (var zi = 0; zi < c.zonas.length; zi++) {
+        var z = c.zonas[zi];
+        var desc = (z.desc || "—");
+        // Truncar descripción si es muy larga
+        if (desc.length > 22) desc = desc.slice(0, 20) + "…";
+        html += '<div class="zona-row" style="margin-bottom:' + (veryCompact ? "0.2" : "0.4") + 'mm;">';
+        html += '<span class="zona-num" style="font-size:' + colFontSize + ';min-width:6mm;">Z' + z.z + '</span>';
+        html += '<span class="zona-desc" style="font-size:' + colFontSize + ';">' + desc + '</span>';
+        html += '</div>';
+      }
       html += '</div>';
+    } else {
+      // Una columna para pocos zonas
+      for (var zi = 0; zi < c.zonas.length; zi++) {
+        var z = c.zonas[zi];
+        html += '<div class="zona-row">';
+        html += '<span class="zona-num">Z' + z.z + '</span>';
+        html += '<span class="zona-desc">' + (z.desc || "—") + '</span>';
+        html += '</div>';
+      }
     }
   }
 
