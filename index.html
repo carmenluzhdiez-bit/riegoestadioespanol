@@ -2425,16 +2425,119 @@ function saveHistoryEdits(dateStr) {
    PMR — generado desde HISTORY o PROGRAMS
 ============================================== */
 function buildPMR() {
-  var total = DATES.length;
-  var sectors = {};
-  for (var i = 0; i < PROGRAMS.length; i++) sectors[PROGRAMS[i].sectorN] = 1;
-  var sCount = Object.keys(sectors).length;
+  // ── Calcular estadísticas reales ──
 
-  document.getElementById("pmr-stats").innerHTML =
-    div("stat-card", lbl("Días registrados") + val("v-green", total) + sub("may–jun 2026")) +
-    div("stat-card", lbl("Programas activos") + val("v-blue", PROGRAMS.length) + sub("en sistema")) +
-    div("stat-card", lbl("Controladores") + val("v-amber", sCount) + sub("con riego")) +
-    div("stat-card", lbl("Clave WiFi riego") + val("v-green", "4855") + sub("monitoreo: Sí"));
+  // 1. Días registrados y rango
+  var total = DATES.length;
+  var rangoSub = "";
+  if (total > 0) {
+    var isoFirst = dateToISO(DATES[0]);
+    var isoLast  = dateToISO(DATES[DATES.length - 1]);
+    var dFirst = new Date(isoFirst + "T12:00:00");
+    var dLast  = new Date(isoLast  + "T12:00:00");
+    var mNames = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+    rangoSub = mNames[dFirst.getMonth()] + " " + dFirst.getFullYear()
+             + " – " + mNames[dLast.getMonth()] + " " + dLast.getFullYear();
+  }
+
+  // 2. Programas activos hoy (según día actual)
+  var todayIdx = findTodayIndex();
+  var progHoy = 0;
+  var progSuspendidosHoy = 0;
+  if (todayIdx >= 0) {
+    var todayEntries = getProjectedEntries(todayIdx);
+    progHoy = todayEntries.length;
+    // Revisar historial del día actual para suspendidos
+    var hoy = HISTORY[DATES[todayIdx]];
+    if (hoy && hoy.entries) {
+      for (var hi = 0; hi < hoy.entries.length; hi++) {
+        if (hoy.entries[hi].ejecutado === "lluvia" || hoy.entries[hi].ejecutado === false) progSuspendidosHoy++;
+      }
+    }
+  }
+
+  // 3. Controladores — estado de señal WiFi
+  var ctrlOk   = 0, ctrlWarn = 0, ctrlOff = 0;
+  for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+    var st = obsStatus(CONTROLLERS[ci].obs);
+    if (st === "ok")   ctrlOk++;
+    else if (st === "warn") ctrlWarn++;
+    else ctrlOff++;
+  }
+
+  // 4. Estado de riego hoy — cuántos controladores tienen riego activo/suspendido hoy
+  var ctrlActivos = 0, ctrlSuspendidos = 0;
+  if (todayIdx >= 0) {
+    var todayDateStr = DATES[todayIdx];
+    var hoyH = HISTORY[todayDateStr];
+    var todayProgs = getProjectedEntries(todayIdx);
+    var ctrlConRiego = {};
+    for (var pi = 0; pi < todayProgs.length; pi++) ctrlConRiego[todayProgs[pi].sectorN] = "activo";
+    // Marcar suspendidos por lluvia del día
+    if (hoyH && hoyH.entries) {
+      for (var ei = 0; ei < hoyH.entries.length; ei++) {
+        var e = hoyH.entries[ei];
+        if (e.ejecutado === "lluvia") ctrlConRiego[e.sectorN] = "suspendido";
+      }
+    }
+    if (getDayStatus(todayDateStr) === "lluvia") {
+      // Día entero suspendido
+      for (var sn in ctrlConRiego) ctrlConRiego[sn] = "suspendido";
+    }
+    for (var sn in ctrlConRiego) {
+      if (ctrlConRiego[sn] === "suspendido") ctrlSuspendidos++;
+      else ctrlActivos++;
+    }
+  }
+
+  // ── Construir tarjetas ──
+  var statsHtml = "";
+
+  // Tarjeta 1: Días registrados
+  statsHtml += div("stat-card",
+    lbl("Días registrados") +
+    val("v-green", total) +
+    sub(rangoSub || "sin fechas")
+  );
+
+  // Tarjeta 2: Programas hoy
+  var progSub = todayIdx >= 0
+    ? (progSuspendidosHoy > 0 ? progSuspendidosHoy + " suspendidos hoy" : "activos hoy")
+    : "sin día actual";
+  statsHtml += div("stat-card",
+    lbl("Programas hoy") +
+    val(progSuspendidosHoy > 0 ? "v-amber" : "v-blue", progHoy) +
+    sub(progSub)
+  );
+
+  // Tarjeta 3: Riego hoy — activos vs suspendidos
+  if (todayIdx >= 0 && (ctrlActivos + ctrlSuspendidos) > 0) {
+    var riegoHtml = '<div style="display:flex;align-items:baseline;gap:6px;margin:2px 0">';
+    riegoHtml += '<span class="value v-green" style="font-size:1.3rem">' + ctrlActivos + '</span>';
+    riegoHtml += '<span class="sub" style="font-size:0.65rem">activos</span>';
+    if (ctrlSuspendidos > 0) {
+      riegoHtml += '<span class="value v-amber" style="font-size:1.3rem;margin-left:6px">' + ctrlSuspendidos + '</span>';
+      riegoHtml += '<span class="sub" style="font-size:0.65rem">🌧 susp.</span>';
+    }
+    riegoHtml += '</div>';
+    statsHtml += div("stat-card", lbl("Riego hoy por ctrl.") + riegoHtml + sub("de " + CONTROLLERS.length + " controladores"));
+  } else {
+    statsHtml += div("stat-card",
+      lbl("Riego hoy por ctrl.") +
+      val("v-muted", CONTROLLERS.length) +
+      sub("controladores en sistema")
+    );
+  }
+
+  // Tarjeta 4: Señal WiFi
+  var wifiHtml = '<div style="display:flex;align-items:baseline;gap:5px;margin:2px 0">';
+  wifiHtml += '<span class="value v-green"  style="font-size:1.3rem">' + ctrlOk   + '</span><span class="sub" style="font-size:0.62rem">● OK</span>';
+  if (ctrlWarn > 0) wifiHtml += '<span class="value v-amber" style="font-size:1.3rem;margin-left:5px">' + ctrlWarn + '</span><span class="sub" style="font-size:0.62rem">◐</span>';
+  if (ctrlOff  > 0) wifiHtml += '<span class="value v-red"   style="font-size:1.3rem;margin-left:5px">' + ctrlOff  + '</span><span class="sub" style="font-size:0.62rem">○ sin señal</span>';
+  wifiHtml += '</div>';
+  statsHtml += div("stat-card", lbl("Señal WiFi") + wifiHtml + sub("de " + CONTROLLERS.length + " controladores"));
+
+  document.getElementById("pmr-stats").innerHTML = statsHtml;
 
   // Diferir renders pesados para que iOS Safari no colapse
   requestAnimationFrame(function() {
