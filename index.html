@@ -1681,15 +1681,29 @@ function findNextIrrigation(p) {
   if (p.freqMode === "manual") return null;
   var today = new Date();
   today.setHours(0,0,0,0);
-  var DAY_LETTERS = ["D","L","M","X","J","V","S"]; // domingo=0
+  var DAY_LETTERS = ["D","L","M","X","J","V","S"];
+  // Helper: verificar si una fecha candidata está suspendida por lluvia
+  function isSuspendedByRain(candidate) {
+    var isoStr = candidate.toISOString().slice(0,10);
+    // Buscar en DATES si ese día tiene historial con lluvia
+    for (var di = 0; di < DATES.length; di++) {
+      if (dateToISO(DATES[di]) === isoStr) {
+        var st = getDayStatus(DATES[di]);
+        if (st === "lluvia") return true;
+        break;
+      }
+    }
+    return false;
+  }
   if (p.freqMode === "dias") {
     var days = p.days || [];
     if (days.length === 0) return null;
-    for (var i = 0; i <= 7; i++) {
+    for (var i = 0; i <= 14; i++) {
       var candidate = new Date(today);
       candidate.setDate(today.getDate() + i);
       var letter = DAY_LETTERS[candidate.getDay()];
       if (days.indexOf(letter) >= 0) {
+        if (isSuspendedByRain(candidate)) continue; // saltar día suspendido
         var isToday = i === 0;
         return { date: candidate, str: dateObjToStr(candidate), daysAway: i, isToday: isToday };
       }
@@ -1699,17 +1713,23 @@ function findNextIrrigation(p) {
     if (!p.cycleStart || !p.interval) return null;
     var base = new Date(p.cycleStart + "T00:00:00");
     base.setHours(0,0,0,0);
-    if (base < today) {
-      var diff = Math.ceil((today - base) / 86400000);
-      var rem = diff % p.interval;
-      var daysToNext = rem === 0 ? 0 : p.interval - rem;
-      var next = new Date(today);
-      next.setDate(today.getDate() + daysToNext);
-      var daysAway = Math.round((next - today) / 86400000);
-      return { date: next, str: dateObjToStr(next), daysAway: daysAway, isToday: daysAway === 0 };
-    } else {
-      var daysAway2 = Math.round((base - today) / 86400000);
-      return { date: base, str: dateObjToStr(base), daysAway: daysAway2, isToday: daysAway2 === 0 };
+    // Buscar hasta 30 días hacia adelante para encontrar uno no suspendido
+    for (var attempt = 0; attempt < 30; attempt++) {
+      var next, daysAway;
+      if (base < today) {
+        var diff = Math.ceil((today - base) / 86400000);
+        var rem = diff % p.interval;
+        var daysToNext = rem === 0 ? attempt * p.interval : p.interval - rem + attempt * p.interval;
+        next = new Date(today);
+        next.setDate(today.getDate() + daysToNext);
+      } else {
+        next = new Date(base);
+        next.setDate(base.getDate() + attempt * p.interval);
+      }
+      daysAway = Math.round((next - today) / 86400000);
+      if (!isSuspendedByRain(next)) {
+        return { date: next, str: dateObjToStr(next), daysAway: daysAway, isToday: daysAway === 0 };
+      }
     }
   }
   return null;
