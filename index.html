@@ -1670,7 +1670,15 @@ function dateToISO(dateStr) {
   var day = parseInt(parts[1], 10);
   var monthMap = { may:5, jun:6, jul:7, ago:8, sep:9, oct:10, nov:11, dic:12, ene:1, feb:2, mar:3, abr:4 };
   var month = monthMap[parts[2]] || 1;
-  return "2026-" + (month < 10 ? "0" : "") + month + "-" + (day < 10 ? "0" : "") + day;
+  // Deducir año: si el mes es mayor al actual asumimos año actual, si no el próximo
+  var now = new Date();
+  var year = now.getFullYear();
+  // Si mes + día ya pasó hace más de 6 meses, asumir año siguiente
+  var candidateDate = new Date(year, month - 1, day);
+  if (candidateDate < new Date(now.getFullYear(), now.getMonth() - 6, 1)) {
+    year++;
+  }
+  return year + "-" + (month < 10 ? "0" : "") + month + "-" + (day < 10 ? "0" : "") + day;
 }
 function dateObjToStr(d) {
   var dayNames   = ["dom","lun","mar","mié","jue","vie","sáb"];
@@ -1684,12 +1692,14 @@ function findNextIrrigation(p) {
   var DAY_LETTERS = ["D","L","M","X","J","V","S"];
   // Helper: verificar si una fecha candidata está suspendida por lluvia
   function isSuspendedByRain(candidate) {
-    var isoStr = candidate.toISOString().slice(0,10);
-    // Buscar en DATES si ese día tiene historial con lluvia
+    // Construir ISO en hora local (no UTC) para evitar desfase de zona horaria
+    var y = candidate.getFullYear();
+    var m = candidate.getMonth() + 1;
+    var d = candidate.getDate();
+    var isoStr = y + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;
     for (var di = 0; di < DATES.length; di++) {
       if (dateToISO(DATES[di]) === isoStr) {
-        var st = getDayStatus(DATES[di]);
-        if (st === "lluvia") return true;
+        if (getDayStatus(DATES[di]) === "lluvia") return true;
         break;
       }
     }
