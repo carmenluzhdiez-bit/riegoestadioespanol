@@ -1692,14 +1692,26 @@ function findNextIrrigation(p) {
   var DAY_LETTERS = ["D","L","M","X","J","V","S"];
   // Helper: verificar si una fecha candidata está suspendida por lluvia
   function isSuspendedByRain(candidate) {
-    // Construir ISO en hora local (no UTC) para evitar desfase de zona horaria
     var y = candidate.getFullYear();
     var m = candidate.getMonth() + 1;
     var d = candidate.getDate();
     var isoStr = y + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;
     for (var di = 0; di < DATES.length; di++) {
       if (dateToISO(DATES[di]) === isoStr) {
-        if (getDayStatus(DATES[di]) === "lluvia") return true;
+        var dateStr = DATES[di];
+        var st = getDayStatus(dateStr);
+        // Día entero suspendido por lluvia
+        if (st === "lluvia") return true;
+        // Verificar si este programa específico está suspendido en el historial
+        if (st !== "sin-confirmar" && HISTORY[dateStr] && HISTORY[dateStr].entries) {
+          var entries = HISTORY[dateStr].entries;
+          for (var ei = 0; ei < entries.length; ei++) {
+            var e = entries[ei];
+            if (e.sectorN === p.sectorN && e.programId === p.id) {
+              if (e.ejecutado === "lluvia" || e.ejecutado === false) return true;
+            }
+          }
+        }
         break;
       }
     }
