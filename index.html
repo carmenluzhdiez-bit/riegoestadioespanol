@@ -1294,6 +1294,28 @@
     </div>
   </div>
 </div>
+
+<!-- ════ MODAL: SUSPENSIÓN PREVENTIVA DE PROGRAMAS ════ -->
+<div id="susp-prev-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:2500;align-items:center;justify-content:center;padding:16px">
+  <div style="max-width:480px;width:100%;background:var(--panel);border:1px solid #3b82f6;border-radius:14px;overflow:hidden">
+    <div style="padding:12px 18px;background:#1e3a5f;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;color:#93c5fd">⚙️ Suspensión preventiva</div>
+        <div id="susp-prev-date" style="font-family:var(--font-mono);font-size:0.68rem;color:#60a5fa;margin-top:2px"></div>
+      </div>
+      <button onclick="closeSuspenderPreventivoModal()" style="background:none;border:none;color:#60a5fa;font-size:1.3rem;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted)">Marca los programas que NO deben regar este día. Quedan registrados como suspendidos sin necesidad de confirmar ejecución.</div>
+      <div id="susp-prev-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px;padding-top:4px">
+        <button onclick="guardarSuspensionPreventiva()" style="flex:1;padding:9px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.82rem;font-weight:700;cursor:pointer">Guardar suspensiones</button>
+        <button onclick="closeSuspenderPreventivoModal()" style="padding:9px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--font-mono);font-size:0.78rem;cursor:pointer">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </main>
 <footer>
   <span>Estadio Español · Jefe Áreas Verdes: Carmen Luz Hermosilla</span>
@@ -1700,9 +1722,13 @@ function findNextIrrigation(p) {
       if (dateToISO(DATES[di]) === isoStr) {
         var dateStr = DATES[di];
         var st = getDayStatus(dateStr);
-        // Día entero suspendido por lluvia
         if (st === "lluvia") return true;
-        // Verificar si este programa específico está suspendido en el historial
+        // Verificar suspensión preventiva (prevSuspended)
+        if (HISTORY[dateStr] && HISTORY[dateStr].prevSuspended) {
+          var key = p.sectorN + "_" + (p.programa || "");
+          if (HISTORY[dateStr].prevSuspended.indexOf(key) >= 0) return true;
+        }
+        // Verificar si esta entrada específica está suspendida en el historial
         if (st !== "sin-confirmar" && HISTORY[dateStr] && HISTORY[dateStr].entries) {
           var entries = HISTORY[dateStr].entries;
           for (var ei = 0; ei < entries.length; ei++) {
@@ -1871,11 +1897,26 @@ function getDayStatus(dateStr) {
 function buildDateNav() {
   var nav = document.getElementById("date-nav");
   var todayIdx = findTodayIndex();
-  var winStart = Math.max(0, todayIdx - 10);
+  // Calcular el lunes de esta semana
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  var dow = today.getDay(); // 0=dom
+  var diffToMon = (dow === 0) ? -6 : 1 - dow;
+  var monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMon);
+  var mondayISO = monday.getFullYear() + "-"
+    + (monday.getMonth()+1 < 10 ? "0" : "") + (monday.getMonth()+1) + "-"
+    + (monday.getDate() < 10 ? "0" : "") + monday.getDate();
+  // Encontrar índice del lunes (o el día más cercano posterior)
+  var monIdx = 0;
+  for (var mi = 0; mi < DATES.length; mi++) {
+    if (dateToISO(DATES[mi]) >= mondayISO) { monIdx = mi; break; }
+  }
+  var winStart = Math.max(0, monIdx);
   var winEnd   = Math.min(DATES.length - 1, todayIdx + 14);
   var html = "";
   if (winStart > 0) {
-    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;padding:4px 6px">+' + winStart + ' anteriores</span>';
+    html += '<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);align-self:center;padding:4px 6px;cursor:pointer" onclick="showAllPrevDates()">+' + winStart + ' anteriores</span>';
   }
   for (var i = winStart; i <= winEnd; i++) {
     var active = (i === currentDateIdx) ? " active" : "";
@@ -1914,6 +1955,11 @@ function buildHistoryPanel(dateStr) {
     html += '<button onclick="confirmDay(\'cambios\')" style="padding:5px 12px;background:#d97706;color:#000;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;cursor:pointer">⚠️ Se regó con cambios</button>';
     html += '<button onclick="confirmDay(\'no-regado\')" style="padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">❌ No se regó</button>';
     html += '</div>';
+    // Suspensión preventiva por programa (sin confirmar ejecución)
+    html += '<div style="border-top:1px solid var(--border);margin:10px 0 8px"></div>';
+    html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Suspensión preventiva (antes del riego)</div>';
+    html += '<button onclick="openSuspenderPreventivoModal(\'' + dateStr + '\')" style="padding:5px 14px;background:#1e3a5f;color:#93c5fd;border:1px solid #3b82f6;border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">⚙️ Suspender programas específicos</button>';
+    html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:6px">Marca programas que NO deben regar este día, sin confirmar ejecución. Útil para anticipar suspensiones.</div>';
   } else {
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
     html += '<button onclick="editDayHistory()" style="padding:5px 12px;background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--blue);font-family:var(--font-mono);font-size:0.7rem;cursor:pointer">✎ Editar registro</button>';
@@ -2342,10 +2388,15 @@ function buildScheduleForDate(idx) {
     var ejecutado  = ev.ejecutado  !== false;
     var esAnomalo  = ev.ejecutado  === "anomalo";
     var esLluvia   = ev.ejecutado  === "lluvia";
+    // Verificar suspensión preventiva
+    var prevKey = sectorN + "_" + (programa || "");
+    var esPrevSusp = !useHistory && HISTORY[dateStr] && HISTORY[dateStr].prevSuspended
+                     && HISTORY[dateStr].prevSuspended.indexOf(prevKey) >= 0;
     var color = ctrlColor(sectorN);
     if (!ejecutado) color = "#6b7280";
     if (esAnomalo)  color = "#d97706";
     if (esLluvia)   color = "#60a5fa";
+    if (esPrevSusp) color = "#60a5fa";
     var endMin = startMin + durMin;
     var endStr = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
     var pgLabel = programa ? " · Pg." + programa : "";
@@ -2360,7 +2411,13 @@ function buildScheduleForDate(idx) {
     html += '<div class="schedule-row" style="' + rowStyle + '">';
     html += '<div class="sr-top">';
     html += '<span class="time-tag">' + minToHHMM(startMin) + '</span>';
-    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '') + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '') + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '') + (useHistory && esLluvia ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido</span>' : '') + '</span>';
+    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel
+      + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '')
+      + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '')
+      + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '')
+      + (useHistory && esLluvia ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido</span>' : '')
+      + (esPrevSusp ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido (prev.)</span>' : '')
+      + '</span>';
     html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
     html += '</div>';
     if (zonasConMin.length > 0) {
@@ -2485,13 +2542,10 @@ function addPMRDay() {
 }
 function addPMRWeek() {
   var input = document.getElementById("new-day-input");
-  if (!input || !input.value) {
-    alert("Selecciona primero una fecha de referencia para agregar la semana completa.");
-    return;
-  }
-  var iso = input.value; // "2026-06-15"
+  // Si no hay fecha seleccionada, usar la fecha de hoy
+  var iso = (input && input.value) ? input.value : new Date().toISOString().slice(0,10);
   var ref = new Date(iso + "T12:00:00");
-  var dow = ref.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  var dow = ref.getDay();
   var diffToMon = (dow === 0) ? -6 : 1 - dow;
   var monday = new Date(ref);
   monday.setDate(ref.getDate() + diffToMon);
@@ -2539,9 +2593,24 @@ function addPMRWeek() {
   for (var i = 0; i < DATES.length; i++) {
     if (DATES[i] === targetLabel) { currentDateIdx = i; break; }
   }
-  input.value = "";
+  if (input) input.value = "";
   buildPMR();
   saveToStorage();
+}
+
+function showAllPrevDates() {
+  // Mostrar todos los días anteriores expandiendo la ventana
+  var nav = document.getElementById("date-nav");
+  var todayIdx = findTodayIndex();
+  var winEnd = Math.min(DATES.length - 1, todayIdx + 14);
+  var html = "";
+  for (var i = 0; i <= winEnd; i++) {
+    var active = (i === currentDateIdx) ? " active" : "";
+    var st = getDayStatus(DATES[i]);
+    var dot = st === "ejecutado" ? "✅" : st === "cambios" ? "⚠️" : st === "no-regado" ? "❌" : st === "lluvia" ? "🌧" : "";
+    html += '<button class="date-btn' + active + '" onclick="selectDate(' + i + ')">' + (dot ? dot + " " : "") + DATES[i] + '</button>';
+  }
+  nav.innerHTML = html;
 }
 var wifiFilter = "all";
 function buildWifi() {
