@@ -3425,10 +3425,10 @@ function renderPrograms() {
     var ctrlName = cprogs[0].sectorName;
     html += '<div style="background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 14px;'
           + 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:' + (ci===0?'0':'14px') + '">';
-    html += '<span style="font-weight:700;font-size:0.85rem">N°\u202f' + sn + '\u00b7 ' + ctrlName + '</span>';
+    html += '<span style="font-weight:700;font-size:0.85rem">N° ' + sn + '· ' + ctrlName + '</span>';
     html += '<span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);background:var(--panel);'
           + 'border:1px solid var(--border);border-radius:5px;padding:2px 8px">'
-          + cprogs.length + '\u00a0prog.</span>';
+          + cprogs.length + ' prog.</span>';
     html += '</div>';
     var byPg = {};
     for (var pi = 0; pi < cprogs.length; pi++) {
@@ -3451,8 +3451,8 @@ function renderPrograms() {
         var next = findNextIrrigation(p);
         var nextTxt = "";
         if (next) {
-          nextTxt = next.isToday ? "Hoy" : next.daysAway === 1 ? "Mañana" : "en " + next.daysAway + "\u00a0días";
-          nextTxt += " \u00b7 " + next.str;
+          nextTxt = next.isToday ? "Hoy" : next.daysAway === 1 ? "Mañana" : "en " + next.daysAway + " días";
+          nextTxt += " · " + next.str;
         } else {
           nextTxt = "Manual";
         }
@@ -3464,7 +3464,7 @@ function renderPrograms() {
             zonaChips += '<span class="prog-zona-chip">'
               + '<span class="zn">Z' + zz.id + '</span>'
               + (zlabel ? '<span style="color:var(--text);font-size:0.6rem">' + zlabel + '</span>' : '')
-              + '<span class="zm">' + zz.min + '\u00a0min</span>'
+              + '<span class="zm">' + zz.min + ' min</span>'
               + '</span>';
           }
         } else if (p.zonasLabels && p.zonasLabels.length > 0) {
@@ -3476,8 +3476,8 @@ function renderPrograms() {
           ? '<span class="conflict-inline">&#9888; Conflicto</span>'
           : '<span class="ok-inline">&#10003; OK</span>';
         var freqShort = buildDaysLabel(p);
-        var subLine   = minToHHMM(p.start) + "\u00b7" + p.dur + "\u00a0min \u00b7 " + freqShort;
-        if (p.notes) subLine += " \u00b7 " + p.notes;
+        var subLine   = minToHHMM(p.start) + "·" + p.dur + " min · " + freqShort;
+        if (p.notes) subLine += " · " + p.notes;
         html += '<div class="prog-card' + (isEditing?" editing":"") + '" id="' + cardId + '">';
         html += '<div class="prog-card-head" onclick="progToggleCard(\'' + bodyId + '\')">';
         html += '<span class="prog-card-badge" style="background:' + pgC.bg + ';color:' + pgC.txt + ';min-width:28px;text-align:center">' + pgLetter + '</span>';
@@ -3486,14 +3486,14 @@ function renderPrograms() {
         if (isEditing) html += '<span style="font-size:0.6rem;color:var(--green);margin-right:6px">&#9998; editando</span>';
         html += '<span style="font-weight:700">' + p.sectorName + '</span>'
               + ' <span style="color:var(--muted);font-size:0.72rem;font-weight:400">'
-              + minToHHMM(p.start) + '\u00a0\u00b7\u00a0' + p.dur + '\u00a0min</span>';
+              + minToHHMM(p.start) + ' · ' + p.dur + ' min</span>';
         html += '</div>';
         html += '<div class="prog-card-sub">' + freqShort;
         if (next) {
           var nextColor = next.isToday ? "var(--green)" : next.daysAway===1 ? "var(--amber)" : "var(--muted)";
-          html += ' \u00b7 <span style="color:' + nextColor + '">\u2192 ' + nextTxt + '</span>';
+          html += ' · <span style="color:' + nextColor + '">\u2192 ' + nextTxt + '</span>';
         }
-        if (p.notes) html += ' \u00b7 ' + p.notes;
+        if (p.notes) html += ' · ' + p.notes;
         html += '</div>';
         html += '</div>';
         html += '<div class="prog-card-actions">' + statusHtml + '</div>';
@@ -3508,7 +3508,7 @@ function renderPrograms() {
         html += '<div><div class="prog-card-detail-label">Inicio</div>'
               + '<div class="prog-card-detail-val" style="color:var(--green)">' + minToHHMM(p.start) + '</div></div>';
         html += '<div><div class="prog-card-detail-label">Duración total</div>'
-              + '<div class="prog-card-detail-val">' + p.dur + '\u00a0min</div></div>';
+              + '<div class="prog-card-detail-val">' + p.dur + ' min</div></div>';
         html += '<div><div class="prog-card-detail-label">Frecuencia</div>'
               + '<div class="prog-card-detail-val">' + buildDaysLabel(p) + '</div></div>';
         html += '<div><div class="prog-card-detail-label">Próximo riego</div>'
@@ -5323,7 +5323,7 @@ function buildPlantillasList() {
     var metBadge = t.metodo === "manguera"
       ? '<span style="font-family:var(--font-mono);font-size:0.6rem;background:#1a3a2a;color:#86efac;border:1px solid #22c55e;padding:1px 6px;border-radius:4px">🪣 manguera</span>'
       : '<span style="font-family:var(--font-mono);font-size:0.6rem;background:var(--panel);color:var(--muted);border:1px solid var(--border);padding:1px 6px;border-radius:4px">💧 sistema</span>';
-    var zonasText = t.zonas.map(function(z){ return "Z" + z.id + "\u00a0" + z.min + "min"; }).join(" · ");
+    var zonasText = t.zonas.map(function(z){ return "Z" + z.id + " " + z.min + "min"; }).join(" · ");
     html += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">';
     html += '<div style="font-size:1.2rem;flex-shrink:0;margin-top:2px">' + icon + '</div>';
     html += '<div style="flex:1;min-width:0">';
@@ -5916,13 +5916,13 @@ function buildEtiqueta(c, fecha) {
       var zonasStr = "";
       if (p.zonasConMin && p.zonasConMin.length) {
         zonasStr = p.zonasConMin.map(function(z){
-          return "Z" + z.id + "\u00a0" + z.min + "m";
+          return "Z" + z.id + " " + z.min + "m";
         }).join(" · ");
       }
       html += '<div class="prog-row" style="' + (compact ? "margin-bottom:0.3mm;" : "") + '">';
       html += '<span class="prog-badge" style="' + (compact ? "font-size:6pt;padding:0.2mm 1.5mm;" : "") + '">' + (p.programa||"?") + '</span>';
       html += '<span class="prog-hora" style="' + (compact ? "font-size:7pt;" : "") + '">' + minToHHMM(p.start) + '</span>';
-      html += '<span class="prog-dur" style="' + (compact ? "font-size:6pt;" : "") + '">' + p.dur + '\u00a0min\u00a0·\u00a0' + freqStr + '</span>';
+      html += '<span class="prog-dur" style="' + (compact ? "font-size:6pt;" : "") + '">' + p.dur + ' min · ' + freqStr + '</span>';
       html += '</div>';
       if (zonasStr) {
         html += '<div class="prog-zonas" style="padding-left:2mm;margin-top:-0.3mm;margin-bottom:' + (compact ? "0.5" : "1") + 'mm;' + (compact ? "font-size:5.5pt;" : "") + '">' + zonasStr + '</div>';
@@ -5958,7 +5958,59 @@ function buildEtiqueta(c, fecha) {
   }
   html += '</div>';
   return html;
-}</script><!-- ====== MODAL: Seleccionar controladores para imprimir ====== -->
+}
+/* ── SUSPENSIÓN PREVENTIVA DE PROGRAMAS ── */
+var suspPrevDateStr = "";
+function openSuspenderPreventivoModal(dateStr) {
+  suspPrevDateStr = dateStr;
+  document.getElementById("susp-prev-date").textContent = dateStr;
+  var idx = DATES.indexOf(dateStr);
+  var progs = idx >= 0 ? getProjectedEntries(idx) : [];
+  var existing = {};
+  if (HISTORY[dateStr] && HISTORY[dateStr].prevSuspended) {
+    var ps = HISTORY[dateStr].prevSuspended;
+    for (var i = 0; i < ps.length; i++) existing[ps[i]] = true;
+  }
+  var html = "";
+  if (progs.length === 0) {
+    html = '<div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);padding:8px 0">Sin programas proyectados para este dia.</div>';
+  }
+  for (var pi = 0; pi < progs.length; pi++) {
+    var p = progs[pi];
+    var key = p.sectorN + "_" + (p.programa || "");
+    var checked = existing[key] ? "checked" : "";
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px">';
+    html += '<input type="checkbox" id="sp-cb-' + pi + '" data-key="' + key + '" ' + checked + ' style="width:16px;height:16px;accent-color:#3b82f6;flex-shrink:0">';
+    html += '<div style="flex:1">';
+    html += '<div style="font-weight:700;font-size:0.78rem">N°' + p.sectorN + ' ' + p.sectorName;
+    if (p.programa) html += ' <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">Pg.' + p.programa + '</span>';
+    html += '</div>';
+    html += '<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">' + minToHHMM(p.start) + ' · ' + p.dur + ' min</div>';
+    html += '</div>';
+    if (existing[key]) html += '<span style="font-family:var(--font-mono);font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px">lluvia suspendido</span>';
+    html += '</div>';
+  }
+  document.getElementById("susp-prev-list").innerHTML = html;
+  document.getElementById("susp-prev-modal").style.display = "flex";
+}
+function closeSuspenderPreventivoModal() {
+  document.getElementById("susp-prev-modal").style.display = "none";
+}
+function guardarSuspensionPreventiva() {
+  var dateStr = suspPrevDateStr;
+  var cbs = document.querySelectorAll("#susp-prev-list input[type=checkbox]");
+  var suspended = [];
+  for (var i = 0; i < cbs.length; i++) {
+    if (cbs[i].checked) suspended.push(cbs[i].getAttribute("data-key"));
+  }
+  if (!HISTORY[dateStr]) HISTORY[dateStr] = { status: "sin-confirmar", entries: [], prevSuspended: [] };
+  HISTORY[dateStr].prevSuspended = suspended;
+  saveToStorage();
+  closeSuspenderPreventivoModal();
+  buildScheduleForDate(currentDateIdx);
+  buildHistoryPanel(dateStr);
+}
+</script><!-- ====== MODAL: Seleccionar controladores para imprimir ====== -->
 <div id="ctrl-print-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
   <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(520px,95vw);max-height:88vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
