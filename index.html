@@ -6021,8 +6021,8 @@ function guardarSuspensionPreventiva() {
    frecuencia, observaciones y zonas con descripción
 ============================================== */
 function printCtrlDetallado() {
-  var selected = getSelectedCtrlNums();
-  if (selected.length === 0) { alert("Selecciona al menos un controlador."); return; }
+  if (ctrlPrintSelected.size === 0) { alert("Selecciona al menos un controlador."); return; }
+  var selected = Array.from(ctrlPrintSelected).sort(function(a,b){return a-b;});
   closeCtrlPrintModal();
   var fecha = new Date().toLocaleDateString("es-CL", {day:"numeric",month:"long",year:"numeric"});
   var w = window.open("","_blank");
