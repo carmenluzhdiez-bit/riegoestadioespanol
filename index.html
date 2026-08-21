@@ -4232,9 +4232,8 @@ function getEventsForDate(idx) {
     for (var i = 0; i < newP.length; i++) { newP[i].isNew = true; events.push(newP[i]); }
     events = events.filter(function(e){ return !e._obsoleto; });
   } else {
-    for (var i = 0; i < PROGRAMS.length; i++) {
-      if (programRunsOnDate(PROGRAMS[i], idx)) events.push(PROGRAMS[i]);
-    }
+    var projected = getProjectedEntries(idx);
+    for (var i = 0; i < projected.length; i++) events.push(projected[i]);
   }
   events.sort(function(a,b){
     if ((a.start||0) !== (b.start||0)) return (a.start||0) - (b.start||0);
@@ -4308,7 +4307,7 @@ function printRangeReport() {
         var extraIcon = ev._isExtra ? (ev.motivo === 'helada' ? '❄️ ' : ev.motivo === 'calor' ? '🔥 ' : ev.motivo === 'reparacion' ? '🔧 ' : ev.motivo === 'evento' ? '⛔ ' : '➕ ') : '';
         html += '<tr style="' + extraRowStyle + '">';
         html += '<td><span class="time">' + minToHHMM(startMin) + '</span></td>';
-        html += '<td>' + (ev._isExtra ? '<span style="background:#1e3a5f;color:#93c5fd;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-right:4px">EXTRA</span>' : pgLabel) + extraIcon + '<strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong>' + (ev._isExtra && ev.metodo ? ' <span style="font-size:8px;color:#666">' + (ev.metodo === 'manguera' ? '🪣 manguera' : '💧 sistema') + '</span>' : '') + (ev.notas ? '<br><span style="color:#666;font-size:9px">' + ev.notas + '</span>' : '') + '</td>';
+        html += '<td><strong>N°' + ev.sectorN + ' ' + ev.sectorName + '</strong> ' + (ev._isExtra ? '<span style="background:#1e3a5f;color:#93c5fd;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px">EXTRA</span> ' + extraIcon : pgLabel) + (ev._isExtra && ev.metodo ? ' <span style="font-size:8px;color:#666">' + (ev.metodo === 'manguera' ? '🪣 manguera' : '💧 sistema') + '</span>' : '') + (ev.notas ? '<br><span style="color:#666;font-size:9px">' + ev.notas + '</span>' : '') + '</td>';
         html += '<td><span class="dur">' + durMin + '</span></td>';
         html += '<td>' + zonaChips + '</td>';
         html += '<td>' + evStatus + '</td>';
@@ -4432,7 +4431,7 @@ function printDayReport() {
       var freqCell = isExtraPrint ? '—' : (p.days ? buildDaysLabel(p) : (p.freqMode==='intervalo'?'Cada '+p.interval+' días':'Manual'));
       html += '<tr style="'+extraBgPrint+'">';
       html += '<td><span class="time">'+minToHHMM(startMin)+'</span></td>';
-      html += '<td>'+extraPgLabel+'<strong>N°'+p.sectorN+' '+p.sectorName+'</strong>'+(isExtraPrint?'':entryStatus)+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
+      html += '<td><strong>N°'+p.sectorN+' '+p.sectorName+'</strong> '+extraPgLabel+(isExtraPrint?'':entryStatus)+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
       html += '<td><span class="dur">'+durMin+' min</span></td>';
       html += '<td style="font-family:monospace;font-size:9px">'+freqCell+'</td>';
       html += '<td>'+zonaChips+'</td>';
