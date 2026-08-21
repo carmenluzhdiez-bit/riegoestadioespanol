@@ -6014,6 +6014,154 @@ function guardarSuspensionPreventiva() {
   buildScheduleForDate(currentDateIdx);
   buildHistoryPanel(dateStr);
 }
+
+/* ==============================================
+   INFORME DETALLADO POR CONTROLADOR
+   Incluye: programas, próximo riego por zona,
+   frecuencia, observaciones y zonas con descripción
+============================================== */
+function printCtrlDetallado() {
+  var selected = getSelectedCtrlNums();
+  if (selected.length === 0) { alert("Selecciona al menos un controlador."); return; }
+  closeCtrlPrintModal();
+  var fecha = new Date().toLocaleDateString("es-CL", {day:"numeric",month:"long",year:"numeric"});
+  var w = window.open("","_blank");
+  if (!w) { alert("Permite ventanas emergentes para imprimir."); return; }
+  var css = [
+    "*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;}",
+    "body{background:#fff;padding:20px;font-size:11px;color:#111;}",
+    "h1{font-size:18px;color:#0a4f2e;border-bottom:3px solid #0a4f2e;padding-bottom:6px;margin-bottom:16px;}",
+    ".ctrl-card{border:2px solid #0a4f2e;border-radius:8px;margin-bottom:24px;overflow:hidden;page-break-inside:avoid;}",
+    ".ctrl-header{background:#0a4f2e;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}",
+    ".ctrl-header-left h2{font-size:15px;font-weight:700;margin:0;}",
+    ".ctrl-header-left p{font-size:9px;color:#a8d5b5;margin-top:2px;}",
+    ".ctrl-header-right{font-size:9px;color:#a8d5b5;text-align:right;}",
+    ".ctrl-body{padding:14px;}",
+    ".prog-block{margin-bottom:16px;border:1px solid #d1fae5;border-radius:6px;overflow:hidden;}",
+    ".prog-header{background:#f0fdf4;padding:8px 12px;border-bottom:1px solid #d1fae5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}",
+    ".prog-badge{font-size:11px;font-weight:700;padding:2px 10px;border-radius:4px;background:#0a4f2e;color:#fff;}",
+    ".prog-info{font-size:10px;color:#374151;}",
+    ".prog-notes{font-size:9px;color:#6b7280;font-style:italic;margin-left:auto;}",
+    ".prog-body{padding:8px 12px;}",
+    "table{width:100%;border-collapse:collapse;margin-top:4px;}",
+    "th{background:#1e3a5f;color:#fff;padding:5px 8px;text-align:left;font-size:9px;font-weight:700;}",
+    "td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px;vertical-align:top;}",
+    "tr:last-child td{border-bottom:none;}",
+    "tr:nth-child(even) td{background:#f8fafc;}",
+    ".zona-num{color:#1e3a5f;font-weight:700;font-family:monospace;white-space:nowrap;}",
+    ".zona-min{color:#0a4f2e;font-weight:700;font-family:monospace;white-space:nowrap;}",
+    ".next-date{color:#0a4f2e;font-weight:700;white-space:nowrap;}",
+    ".next-today{color:#dc2626;font-weight:700;}",
+    ".obs{color:#6b7280;font-style:italic;font-size:9px;}",
+    ".zonas-section{margin-top:12px;border-top:1px dashed #d1d5db;padding-top:10px;}",
+    ".zonas-section h4{font-size:10px;color:#374151;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}",
+    ".zona-list-row{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6;align-items:baseline;}",
+    ".footer{margin-top:20px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#999;text-align:center;}",
+    "@media print{body{padding:8px;}button{display:none!important;}.ctrl-card{page-break-inside:avoid;}}"
+  ].join("\n");
+
+  var body = "";
+  for (var si = 0; si < selected.length; si++) {
+    var sn = selected[si];
+    var ctrl = null;
+    for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+      if (CONTROLLERS[ci].n === sn) { ctrl = CONTROLLERS[ci]; break; }
+    }
+    if (!ctrl) continue;
+    var progs = PROGRAMS.filter(function(p){ return p.sectorN === sn; });
+    progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
+    var wifiStr = ctrl.obs || "—";
+
+    body += '<div class="ctrl-card">';
+    body += '<div class="ctrl-header">';
+    body += '<div class="ctrl-header-left"><h2>N°' + ctrl.n + ' &nbsp; ' + ctrl.name + '</h2>';
+    body += '<p>WiFi: ' + (ctrl.ssid||"—") + ' &nbsp;·&nbsp; Estado: ' + wifiStr + '</p></div>';
+    body += '<div class="ctrl-header-right">PMR EE &nbsp;·&nbsp; ' + fecha + '</div>';
+    body += '</div>';
+    body += '<div class="ctrl-body">';
+
+    if (progs.length === 0) {
+      body += '<p style="color:#999;font-size:10px;padding:8px 0">Sin programas registrados para este controlador.</p>';
+    }
+
+    for (var pi = 0; pi < progs.length; pi++) {
+      var p = progs[pi];
+      var freqStr = "";
+      if (p.freqMode === "dias" && p.days && p.days.length) freqStr = "Días: " + p.days.join("-");
+      else if (p.freqMode === "intervalo" && p.interval) freqStr = "Cada " + p.interval + " días";
+      else freqStr = "Manual";
+      var next = findNextIrrigation(p);
+      var nextStr = next ? (next.isToday ? "HOY" : next.daysAway === 1 ? "Mañana" : "en " + next.daysAway + " días") + " · " + next.str : "—";
+      var nextCls = next && next.isToday ? "next-today" : "next-date";
+
+      body += '<div class="prog-block">';
+      body += '<div class="prog-header">';
+      body += '<span class="prog-badge">Prog. ' + (p.programa||"?") + '</span>';
+      body += '<span class="prog-info">Inicio: <strong>' + minToHHMM(p.start) + '</strong> &nbsp;·&nbsp; Duración: <strong>' + p.dur + ' min</strong> &nbsp;·&nbsp; ' + freqStr + '</span>';
+      body += '<span class="' + nextCls + '" style="font-size:10px">Próximo: ' + nextStr + '</span>';
+      if (p.notes) body += '<span class="prog-notes">📝 ' + p.notes + '</span>';
+      body += '</div>';
+      body += '<div class="prog-body">';
+
+      // Tabla de zonas con minutos y próximo riego
+      if (p.zonasConMin && p.zonasConMin.length > 0) {
+        body += '<table><thead><tr><th>Zona</th><th>Descripción</th><th>Minutos</th><th>Próximo riego</th><th>Observaciones</th></tr></thead><tbody>';
+        for (var zi = 0; zi < p.zonasConMin.length; zi++) {
+          var z = p.zonasConMin[zi];
+          var zDesc = z.label ? z.label.replace(/^Z[^\s]+\s*/,"") : "";
+          // Buscar descripción en el controlador si está vacía
+          if (!zDesc && ctrl.zonas) {
+            for (var zci = 0; zci < ctrl.zonas.length; zci++) {
+              if (String(ctrl.zonas[zci].z) === String(z.id)) { zDesc = ctrl.zonas[zci].desc || ""; break; }
+            }
+          }
+          var zObs = "";
+          if (ctrl.zonas) {
+            for (var zci = 0; zci < ctrl.zonas.length; zci++) {
+              if (String(ctrl.zonas[zci].z) === String(z.id)) { zObs = ctrl.zonas[zci].obs || ctrl.zonas[zci].nota || ""; break; }
+            }
+          }
+          body += '<tr>';
+          body += '<td class="zona-num">Z' + z.id + '</td>';
+          body += '<td>' + (zDesc || '<span style="color:#999">—</span>') + '</td>';
+          body += '<td class="zona-min">' + z.min + ' min</td>';
+          body += '<td class="' + nextCls + '">' + nextStr + '</td>';
+          body += '<td class="obs">' + (zObs || '') + '</td>';
+          body += '</tr>';
+        }
+        body += '</tbody></table>';
+      } else {
+        body += '<p style="color:#999;font-size:9px">Sin zonas detalladas en este programa.</p>';
+      }
+      body += '</div></div>';
+    }
+
+    // Listado completo de zonas del controlador
+    if (ctrl.zonas && ctrl.zonas.length > 0) {
+      body += '<div class="zonas-section"><h4>Todas las zonas / válvulas del controlador</h4>';
+      body += '<table><thead><tr><th>Zona</th><th>Descripción</th><th>Observaciones</th></tr></thead><tbody>';
+      for (var zi = 0; zi < ctrl.zonas.length; zi++) {
+        var z = ctrl.zonas[zi];
+        body += '<tr><td class="zona-num">Z' + z.z + '</td><td>' + (z.desc||"—") + '</td><td class="obs">' + (z.obs||z.nota||"") + '</td></tr>';
+      }
+      body += '</tbody></table></div>';
+    }
+
+    body += '</div></div>';
+  }
+
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Controladores - PMR EE</title><style>' + css + '</style></head><body>');
+  w.document.write('<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px">');
+  w.document.write('<div><h1>Informe de Controladores de Riego</h1><p style="color:#666;font-size:10px">Estadio Español · Departamento de Áreas Verdes</p></div>');
+  w.document.write('<div style="text-align:right;font-size:10px;color:#666">' + selected.length + ' controlador' + (selected.length!==1?"es":"") + ' · ' + fecha + '</div>');
+  w.document.write('</div>');
+  w.document.write(body);
+  w.document.write('<div class="footer">PMR EE · Áreas Verdes · Estadio Español · Generado el ' + new Date().toLocaleString("es-CL") + '</div>');
+  w.document.write('<br><div style="text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#0a4f2e;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">🖨 Imprimir / PDF</button></div>');
+  w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
 </script><!-- ====== MODAL: Seleccionar controladores para imprimir ====== -->
 <div id="ctrl-print-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center">
   <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(520px,95vw);max-height:88vh;display:flex;flex-direction:column">
@@ -6030,7 +6178,8 @@ function guardarSuspensionPreventiva() {
     <div id="ctrl-print-list" style="overflow-y:auto;flex:1;max-height:52vh;display:flex;flex-direction:column;gap:4px;padding-right:4px;margin-bottom:14px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">
       <button onclick="closeCtrlPrintModal()" style="padding:7px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);cursor:pointer">Cancelar</button>
-      <button onclick="printSelectedControllers()" style="padding:7px 16px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">🖨 Imprimir selección</button>
+      <button onclick="printSelectedControllers()" style="padding:7px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--text);cursor:pointer">🖨 Vista general</button>
+      <button onclick="printCtrlDetallado()" style="padding:7px 16px;background:var(--green);color:#000;border:none;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;cursor:pointer">🗂 Informe detallado</button>
     </div>
   </div>
 </div>
