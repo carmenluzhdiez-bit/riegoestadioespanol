@@ -4289,21 +4289,23 @@ function printRangeReport() {
         var startMin = ev.start || 0;
         var durMin   = ev.durReal || ev.dur || 0;
         var pgLabel  = ev.programa ? '<span class="prog-label pg-' + (ev.programa.charAt(0)||'a').toLowerCase() + '">' + ev.programa + '</span>' : '';
-        var zonaChips = '';
+        var zonaChips = '<div style="min-width:160px">';
         var zonas = getNormalizedZonas(ev);
         for (var zi = 0; zi < zonas.length; zi++) {
           var zz = zonas[zi];
           var zEj = zz.ejecutado;
-          var zIcon = zEj === false ? "❌" : zEj === "anomalo" ? "⚠️" : zEj === "lluvia" ? "🌧" : "";
-          var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,22);
-          zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + " " : "") + '<span class="zona-num">Z' + zz.id + '</span> <span class="zona-min">' + zz.minReal + 'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">' + zLabel + '</span>' : '') + '</span>';
+          var zIcon = zEj === false ? "❌ " : zEj === "anomalo" ? "⚠️ " : zEj === "lluvia" ? "🌧 " : "";
+          var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,28);
+          zonaChips += '<div class="zona-row">' + zIcon + '<span class="zona-num" style="min-width:28px">Z' + zz.id + '</span><span class="zona-min" style="min-width:36px">' + zz.minReal + 'min</span>' + (zLabel ? '<span style="color:#555;font-size:9px">' + zLabel + '</span>' : '') + '</div>';
         }
+        zonaChips += '</div>';
         var evEj = ev.ejecutado;
         var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
           : evEj === "anomalo" ? '<span style="color:#d97706;font-size:9px">⚠️ Anómalo</span>'
           : evEj === "lluvia"  ? '<span style="color:#3b82f6;font-size:9px">🌧 Suspendido</span>'
           : useHist ? '<span style="color:#16a34a;font-size:9px">✅ OK</span>' : '<span style="color:#6b7280;font-size:9px">Proyección</span>';
-        var extraRowStyle = ev._isExtra ? 'background:#eff6ff;' : '';
+        var ctrlBgRange = 'background:' + ctrlColorPrint(ev.sectorN) + '10;';
+        var extraRowStyle = ev._isExtra ? 'background:#eff6ff;' : ctrlBgRange;
         var extraIcon = ev._isExtra ? (ev.motivo === 'helada' ? '❄️ ' : ev.motivo === 'calor' ? '🔥 ' : ev.motivo === 'reparacion' ? '🔧 ' : ev.motivo === 'evento' ? '⛔ ' : '➕ ') : '';
         html += '<tr style="' + extraRowStyle + '">';
         html += '<td><span class="time">' + minToHHMM(startMin) + '</span></td>';
@@ -4343,8 +4345,9 @@ function buildPrintWindow(title, bodyHtml) {
  w.document.write('.badge { display: inline-block; background: #0a4f2e; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px; }');
  w.document.write('table { width: 100%; border-collapse: collapse; margin: 8px 0; }');
  w.document.write('th { background: #0a4f2e; color: #fff; padding: 5px 8px; text-align: left; font-size: 10px; }');
- w.document.write('td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; vertical-align: top; }');
- w.document.write('tr:nth-child(even) td { background: #f0fdf4; }');
+ w.document.write('td { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; vertical-align: top; }');
+ w.document.write('.zona-row { display: flex; align-items: baseline; gap: 6px; padding: 1px 0; border-bottom: 1px solid #f0fdf4; }');
+ w.document.write('.zona-row:last-child { border-bottom: none; }');
  w.document.write('.time { font-family: monospace; font-weight: 700; color: #0a4f2e; white-space: nowrap; }');
  w.document.write('.dur { font-family: monospace; color: #1e3a5f; }');
  w.document.write('.zona-chip { display: inline-block; background: #e8f5ee; border: 1px solid #a7f3d0; border-radius: 3px; padding: 1px 5px; margin: 1px; font-size: 9px; font-family: monospace; }');
@@ -4396,7 +4399,8 @@ function printDayReport() {
       var durMin   = p.durReal || p.dur || 0;
       var evEj     = p.ejecutado;
       var color    = ctrlColorPrint(p.sectorN);
-      var rowBg    = evEj === false ? 'background:#fff0f0' : evEj === 'lluvia' ? 'background:#eff6ff' : evEj === 'anomalo' ? 'background:#fffbeb' : '';
+      var ctrlBg   = 'background:' + ctrlColorPrint(p.sectorN) + '10';
+      var rowBg    = evEj === false ? 'background:#fff0f0' : evEj === 'lluvia' ? 'background:#eff6ff' : evEj === 'anomalo' ? 'background:#fffbeb' : ctrlBg;
       var endMin   = startMin + durMin;
       var endStr   = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
       var pgLabel  = p.programa ? '<span class="prog-label pg-' + (p.programa.charAt(0)||'a').toLowerCase() + '">' + p.programa + '</span>' : '';
@@ -4407,15 +4411,16 @@ function printDayReport() {
                     : evEj === 'lluvia'     ? ' <span style="color:#2563eb;font-size:9px;font-weight:700">🌧 Suspendido</span>'
                     : '<span style="color:#16a34a;font-size:9px">✅</span>';
       }
-      var zonaChips = '';
+      var zonaChips = '<div style="min-width:160px">';
       var zonas = getNormalizedZonas(p);
       for (var zi = 0; zi < zonas.length; zi++) {
         var zz = zonas[zi];
         var zEj  = zz.ejecutado;
-        var zIcon = zEj === false ? '❌' : zEj === 'anomalo' ? '⚠️' : zEj === 'lluvia' ? '🌧' : '';
-        var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,22);
-        zonaChips += '<span class="zona-chip">' + (zIcon ? zIcon + ' ' : '') + '<span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zz.minReal+'min</span>' + (zLabel ? ' <span style="color:#666;font-size:8px">'+zLabel+'</span>' : '') + '</span>';
+        var zIcon = zEj === false ? '❌ ' : zEj === 'anomalo' ? '⚠️ ' : zEj === 'lluvia' ? '🌧 ' : '';
+        var zLabel = zz.label.replace(/^Z\d+\s*/,'').slice(0,28);
+        zonaChips += '<div class="zona-row">' + zIcon + '<span class="zona-num" style="min-width:28px">Z'+zz.id+'</span><span class="zona-min" style="min-width:36px">'+zz.minReal+'min</span>' + (zLabel ? '<span style="color:#555;font-size:9px">'+zLabel+'</span>' : '') + '</div>';
       }
+      zonaChips += '</div>';
       var leftPct  = (startMin/1440*100).toFixed(1);
       var widthPct = Math.max(durMin/1440*100, 0.5).toFixed(1);
       var barColor = evEj === false ? '#dc2626' : evEj === 'lluvia' ? '#3b82f6' : evEj === 'anomalo' ? '#d97706' : color;
