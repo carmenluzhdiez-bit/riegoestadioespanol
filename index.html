@@ -4301,8 +4301,8 @@ function printRangeReport() {
         zonaChips += '</div>';
         var evEj = ev.ejecutado;
         var prevKeyR = ev.sectorN + '_' + (ev.programa || '');
-        var esPrevSuspR = !useHist && HISTORY[dObj.str] && HISTORY[dObj.str].prevSuspended
-                          && HISTORY[dObj.str].prevSuspended.indexOf(prevKeyR) >= 0;
+        var esPrevSuspR = !useHist && HISTORY[dateStr] && HISTORY[dateStr].prevSuspended
+                          && HISTORY[dateStr].prevSuspended.indexOf(prevKeyR) >= 0;
         var evStatus = evEj === false
           ? '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>'
           : evEj === "anomalo"
