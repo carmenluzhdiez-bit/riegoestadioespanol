@@ -4300,10 +4300,20 @@ function printRangeReport() {
         }
         zonaChips += '</div>';
         var evEj = ev.ejecutado;
-        var evStatus = evEj === false ? '<span style="color:#dc2626;font-size:9px">❌ No ejecutado</span>'
-          : evEj === "anomalo" ? '<span style="color:#d97706;font-size:9px">⚠️ Anómalo</span>'
-          : evEj === "lluvia"  ? '<span style="color:#3b82f6;font-size:9px">🌧 Suspendido</span>'
-          : useHist ? '<span style="color:#16a34a;font-size:9px">✅ OK</span>' : '<span style="color:#6b7280;font-size:9px">Proyección</span>';
+        var prevKeyR = ev.sectorN + '_' + (ev.programa || '');
+        var esPrevSuspR = !useHist && HISTORY[dObj.str] && HISTORY[dObj.str].prevSuspended
+                          && HISTORY[dObj.str].prevSuspended.indexOf(prevKeyR) >= 0;
+        var evStatus = evEj === false
+          ? '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>'
+          : evEj === "anomalo"
+          ? '<span style="display:inline-block;background:#78350f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ Anómalo</span>'
+          : evEj === "lluvia"
+          ? '<span style="display:inline-block;background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">🌧 Suspendido</span>'
+          : esPrevSuspR
+          ? '<span style="display:inline-block;background:#1e3a5f;color:#93c5fd;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;border:1px solid #3b82f6">🌧 Suspendido prev.</span>'
+          : useHist
+          ? '<span style="display:inline-block;background:#14532d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">✅ Ejecutado</span>'
+          : '<span style="display:inline-block;background:#374151;color:#d1d5db;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap">📋 Proyectado</span>';
         var ctrlBgRange = 'background:' + ctrlColorPrint(ev.sectorN) + '10;';
         var extraRowStyle = ev._isExtra ? 'background:#eff6ff;' : ctrlBgRange;
         var extraIcon = ev._isExtra ? (ev.motivo === 'helada' ? '❄️ ' : ev.motivo === 'calor' ? '🔥 ' : ev.motivo === 'reparacion' ? '🔧 ' : ev.motivo === 'evento' ? '⛔ ' : '➕ ') : '';
@@ -4404,12 +4414,25 @@ function printDayReport() {
       var endMin   = startMin + durMin;
       var endStr   = minToHHMM(endMin >= 1440 ? endMin - 1440 : endMin);
       var pgLabel  = p.programa ? '<span class="prog-label pg-' + (p.programa.charAt(0)||'a').toLowerCase() + '">' + p.programa + '</span>' : '';
-      var entryStatus = '';
+      // Verificar suspensión preventiva
+      var prevKey = p.sectorN + '_' + (p.programa || '');
+      var esPrevSusp = !useHist && HISTORY[dateStr] && HISTORY[dateStr].prevSuspended
+                       && HISTORY[dateStr].prevSuspended.indexOf(prevKey) >= 0;
+      // Estado para columna separada
+      var statusCell = '';
       if (useHist) {
-        entryStatus = evEj === false        ? ' <span style="color:#dc2626;font-size:9px;font-weight:700">❌ No ejecutado</span>'
-                    : evEj === 'anomalo'    ? ' <span style="color:#d97706;font-size:9px;font-weight:700">⚠️ Anómalo</span>'
-                    : evEj === 'lluvia'     ? ' <span style="color:#2563eb;font-size:9px;font-weight:700">🌧 Suspendido</span>'
-                    : '<span style="color:#16a34a;font-size:9px">✅</span>';
+        statusCell = evEj === false
+          ? '<span style="display:inline-block;background:#7f1d1d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">❌ No ejecutado</span>'
+          : evEj === 'anomalo'
+          ? '<span style="display:inline-block;background:#78350f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ Anómalo</span>'
+          : evEj === 'lluvia'
+          ? '<span style="display:inline-block;background:#1e3a5f;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">🌧 Suspendido</span>'
+          : '<span style="display:inline-block;background:#14532d;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap">✅ Ejecutado</span>';
+      } else if (esPrevSusp) {
+        statusCell = '<span style="display:inline-block;background:#1e3a5f;color:#93c5fd;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;border:1px solid #3b82f6">🌧 Suspendido prev.</span>';
+        rowBg = 'background:#eff6ff';
+      } else {
+        statusCell = '<span style="display:inline-block;background:#374151;color:#d1d5db;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap">📋 Proyectado</span>';
       }
       var zonaChips = '<div style="min-width:160px">';
       var zonas = getNormalizedZonas(p);
@@ -4436,9 +4459,10 @@ function printDayReport() {
       var freqCell = isExtraPrint ? '—' : (p.days ? buildDaysLabel(p) : (p.freqMode==='intervalo'?'Cada '+p.interval+' días':'Manual'));
       html += '<tr style="'+extraBgPrint+'">';
       html += '<td><span class="time">'+minToHHMM(startMin)+'</span></td>';
-      html += '<td><strong>N°'+p.sectorN+' '+p.sectorName+'</strong> '+extraPgLabel+(isExtraPrint?'':entryStatus)+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
+      html += '<td><strong>N°'+p.sectorN+' '+p.sectorName+'</strong> '+extraPgLabel+(p.notes||p.notas ? '<br><span style="color:#666;font-size:9px">'+(p.notes||p.notas)+'</span>' : '')+'</td>';
       html += '<td><span class="dur">'+durMin+' min</span></td>';
       html += '<td style="font-family:monospace;font-size:9px">'+freqCell+'</td>';
+      html += '<td>'+statusCell+'</td>';
       html += '<td>'+zonaChips+'</td>';
       html += '<td>'+barHtml+'</td>';
       html += '</tr>';
