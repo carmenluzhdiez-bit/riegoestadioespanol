@@ -1650,7 +1650,7 @@ var PROGRAMS = [
 ];
 var nextId = 26;
 var HISTORY = {};
-var currentDateIdx = DATES.length - 1; // default: último día
+var currentDateIdx = 0; // se ajusta a hoy después de cargar Firebase
 function findTodayIndex() {
   var now = new Date();
   var dayNames = ["dom","lun","mar","mié","jue","vie","sáb"];
@@ -1925,6 +1925,10 @@ function buildDateNav() {
     html += '<button class="date-btn' + active + '" onclick="selectDate(' + i + ')">' + (dot ? dot + " " : "") + DATES[i] + '</button>';
   }
   nav.innerHTML = html;
+  requestAnimationFrame(function() {
+    var ab = nav.querySelector(".date-btn.active");
+    if (ab) ab.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" });
+  });
 }
 function selectDate(idx) {
   currentDateIdx = idx;
@@ -4667,6 +4671,16 @@ function doLogin() {
     }
     currentDateIdx = findTodayIndex();
     buildPMR();
+    // Asegurar que hoy queda seleccionado y visible después del render
+    setTimeout(function() {
+      var todayIdx = findTodayIndex();
+      if (currentDateIdx !== todayIdx) {
+        currentDateIdx = todayIdx;
+      }
+      // Hacer scroll al día de hoy en la barra de fechas
+      var activBtn = document.querySelector(".date-btn.active");
+      if (activBtn) activBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }, 400);
     setTimeout(function() {
       buildWifi();
       updateConflictBadge();
