@@ -1106,6 +1106,32 @@
     </div>
   </div>
 </div>
+<!-- Modal confirmación eliminar controlador -->
+<div id="del-ctrl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:2000;align-items:center;justify-content:center;padding:20px">
+  <div style="max-width:400px;width:100%;background:var(--panel);border:2px solid #c0392b;border-radius:16px;overflow:hidden">
+    <div style="padding:16px 20px;background:#2c1010;border-bottom:1px solid #c0392b;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.3rem">⚠️</span>
+      <span style="font-weight:700;font-size:1rem;color:#e74c3c">Eliminar controlador</span>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <p id="del-ctrl-msg" style="margin:0;color:var(--text);font-size:0.93rem;line-height:1.5"></p>
+      <p style="margin:0;color:var(--muted);font-size:0.85rem">Esta acción también eliminará todos sus programas. <strong style="color:#e74c3c">No se puede deshacer.</strong></p>
+      <div>
+        <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:6px">Para confirmar, escriba el número del controlador:</label>
+        <input id="del-ctrl-confirm-input" type="text" placeholder="Ej: 3"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--bg);border:1px solid #c0392b;border-radius:8px;color:var(--text);font-size:1rem;font-weight:700;text-align:center"
+          oninput="checkDelCtrlInput()">
+      </div>
+      <div id="del-ctrl-warn" style="display:none;color:#e74c3c;font-size:0.82rem">El número no coincide.</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="closeDelCtrlModal()" style="padding:9px 18px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;font-size:0.9rem">Cancelar</button>
+        <button id="del-ctrl-ok-btn" onclick="confirmDeleteController()" disabled
+          style="padding:9px 18px;border-radius:8px;border:none;background:#5a1a1a;color:#e74c3c;cursor:not-allowed;font-size:0.9rem;font-weight:700;opacity:0.5">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="ctrl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;overflow-y:auto;padding:20px">
   <div style="max-width:560px;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden">
     <div style="padding:16px 20px;background:var(--panel2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
@@ -1817,7 +1843,7 @@ function showNextIrrigationSearch() {
     if (p.zonasConMin && p.zonasConMin.length > 0) {
       var parts = [];
       for (var zi = 0; zi < p.zonasConMin.length; zi++) {
-        parts.push("Z" + p.zonasConMin[zi].id + " " + (p.zonasConMin[zi].min||0) + "min");
+        parts.push("Z" + normZonaId(p.zonasConMin[zi].id) + " " + (p.zonasConMin[zi].min||0) + "min");
       }
       zonaList = '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:2px">' + parts.join(" · ") + '</div>';
     }
@@ -2024,7 +2050,7 @@ function buildHistoryEditTable(entries, dateStr) {
         var zLluvia  = z.ejecutado === "lluvia";
         var zBg = zAnomalo ? "background:#78350f18;" : (zLluvia ? "background:#1e3a5f22;" : (!zExec ? "background:#7f1d1d18;" : ""));
         html += '<tr style="border-top:1px solid var(--border);' + zBg + '">';
-        html += '<td style="padding:4px 6px;font-family:var(--font-mono);font-size:0.68rem"><span style="color:var(--blue)">Z' + z.id + '</span> ' + (z.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '</td>';
+        html += '<td style="padding:4px 6px;font-family:var(--font-mono);font-size:0.68rem"><span style="color:var(--blue)">Z' + normZonaId(z.id) + '</span> ' + (z.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '</td>';
         html += '<td style="padding:4px 6px;text-align:center"><input type="number" value="' + (z.minReal !== undefined ? z.minReal : z.min) + '" min="0" max="480" onchange="updateZonaEntry(\'' + dateStr + '\',' + i + ',' + zi + ',\'minReal\',this.value)" style="width:46px;text-align:center;padding:2px 4px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>';
         var selVal = z.ejecutado === false ? "false" : (z.ejecutado === "anomalo" ? "anomalo" : (z.ejecutado === "lluvia" ? "lluvia" : "true"));
         var notaPlaceholder = selVal === "anomalo" ? "ej. boquilla rota, pop-up doblado..." : selVal === "lluvia" ? "ej. lluvia equiv. a riego, suelo húmedo..." : "ej. falla válvula";
@@ -2109,7 +2135,7 @@ function getProjectedEntries(idx) {
       if (p.zonasConMin && p.zonasConMin.length > 0) {
         for (var zi = 0; zi < p.zonasConMin.length; zi++) {
           var z = p.zonasConMin[zi];
-          zonas.push({ id: z.id, label: z.label || ("Z"+z.id), min: z.min, minReal: z.min, ejecutado: true, nota: "" });
+          zonas.push({ id: normZonaId(z.id), label: z.label || zonaLabel(z.id, ""), min: z.min, minReal: z.min, ejecutado: true, nota: "" });
         }
       }
       entries.push({
@@ -3466,7 +3492,7 @@ function renderPrograms() {
             var zz = p.zonasConMin[zi];
             var zlabel = zz.label ? zz.label.replace(/^Z[^\s]+\s*/,"").slice(0,20) : "";
             zonaChips += '<span class="prog-zona-chip">'
-              + '<span class="zn">Z' + zz.id + '</span>'
+              + '<span class="zn">Z' + normZonaId(zz.id) + '</span>'
               + (zlabel ? '<span style="color:var(--text);font-size:0.6rem">' + zlabel + '</span>' : '')
               + '<span class="zm">' + zz.min + ' min</span>'
               + '</span>';
@@ -3625,7 +3651,7 @@ function renderControllers() {
         sistemaPgHtml += '<span style="font-family:var(--font-mono);color:var(--blue)">' + minToHHMM(up.start) + '</span>';
         var desc = (up.programa ? '<span style="color:' + pgColor + ';font-weight:700">Pg.' + up.programa + '</span> ' : '') + (up.notes || '');
         if (up.zonasConMin && up.zonasConMin.length > 0) {
-          var zz = up.zonasConMin.map(function(z){ return 'Z'+z.id+' '+z.min+'min'; }).join(' · ');
+          var zz = up.zonasConMin.map(function(z){ return 'Z'+normZonaId(z.id)+' '+z.min+'min'; }).join(' · ');
           desc += '<br><span style="font-size:0.62rem;color:var(--muted)">' + zz + '</span>';
         }
         sistemaPgHtml += '<span style="line-height:1.5">' + desc + '</span>';
@@ -3837,11 +3863,43 @@ function renderCtrlList() {
   }
   list.innerHTML = html || '<div style="color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;padding:16px">Sin controladores.</div>';
 }
+var _delCtrlN = null;
 function deleteController(n) {
   var ctrl = null;
   for (var i = 0; i < CONTROLLERS.length; i++) { if (CONTROLLERS[i].n === n) { ctrl = CONTROLLERS[i]; break; } }
   if (!ctrl) return;
-  if (!confirm("¿Eliminar el controlador N°" + n + " " + ctrl.name + "? También se eliminarán sus programas.")) return;
+  _delCtrlN = n;
+  document.getElementById("del-ctrl-msg").innerHTML =
+    'Va a eliminar el controlador <strong>N°' + n + ' — ' + ctrl.name + '</strong>.';
+  document.getElementById("del-ctrl-confirm-input").value = "";
+  document.getElementById("del-ctrl-warn").style.display = "none";
+  var btn = document.getElementById("del-ctrl-ok-btn");
+  btn.disabled = true; btn.style.opacity = "0.5"; btn.style.cursor = "not-allowed";
+  document.getElementById("del-ctrl-modal").style.display = "flex";
+}
+function checkDelCtrlInput() {
+  var inp = document.getElementById("del-ctrl-confirm-input").value.trim();
+  var btn = document.getElementById("del-ctrl-ok-btn");
+  var warn = document.getElementById("del-ctrl-warn");
+  if (inp === String(_delCtrlN)) {
+    btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
+    btn.style.background = "#c0392b"; btn.style.color = "#fff";
+    warn.style.display = "none";
+  } else {
+    btn.disabled = true; btn.style.opacity = "0.5"; btn.style.cursor = "not-allowed";
+    btn.style.background = "#5a1a1a"; btn.style.color = "#e74c3c";
+    if (inp.length > 0) warn.style.display = "block";
+    else warn.style.display = "none";
+  }
+}
+function closeDelCtrlModal() {
+  document.getElementById("del-ctrl-modal").style.display = "none";
+  _delCtrlN = null;
+}
+function confirmDeleteController() {
+  var n = _delCtrlN;
+  if (!n) return;
+  closeDelCtrlModal();
   CONTROLLERS = CONTROLLERS.filter(function(c) { return c.n !== n; });
   PROGRAMS = PROGRAMS.filter(function(p) { return p.sectorN !== n; });
   WIFI_SECTORS = CONTROLLERS.map(function(c) {
@@ -3908,10 +3966,24 @@ function openCtrlModal(n) {
   }
   modal.style.display = "block";
 }
+// Normaliza un id de zona: quita la Z inicial si ya viene con ella para evitar ZZ01
+function normZonaId(val) {
+  var s = String(val || "").trim();
+  // Si el usuario escribió "Z01" o "Z1", extraer la parte numérica/alfanumérica
+  if (/^Z/i.test(s)) return s.replace(/^Z/i, "");
+  return s;
+}
+// Devuelve el label de zona sin duplicar la Z: siempre "Z" + id limpio
+function zonaLabel(idRaw, desc) {
+  var id = normZonaId(idRaw);
+  return "Z" + id + (desc ? " " + desc : "");
+}
 function nextCtrlNum() {
-  var max = 0;
-  for (var i = 0; i < CONTROLLERS.length; i++) if (CONTROLLERS[i].n > max) max = CONTROLLERS[i].n;
-  return max + 1;
+  var usados = {};
+  for (var i = 0; i < CONTROLLERS.length; i++) usados[CONTROLLERS[i].n] = true;
+  var n = 1;
+  while (usados[n]) n++;
+  return n;
 }
 function closeCtrlModal() {
   document.getElementById("ctrl-modal").style.display = "none";
@@ -3977,7 +4049,7 @@ function saveCtrlModal() {
     var inputs = rows[i].querySelectorAll("input[type=text]");
     var zNum  = inputs[0] ? inputs[0].value.trim() : "";
     var zDesc = inputs[1] ? inputs[1].value.trim() : "";
-    if (zNum && zDesc) zonas.push({ z: zNum, desc: zDesc });
+    if (zNum && zDesc) zonas.push({ z: normZonaId(zNum), desc: zDesc });
   }
   if (zonas.length === 0) {
     warn.style.display = "block";
@@ -4093,6 +4165,13 @@ function loadFromStorage(callback) {
     .then(function(data) {
       if (data && data.controllers) {
         CONTROLLERS = data.controllers;
+        // Normalizar z.z de zonas: si venía "Z01" queda "01" para evitar ZZ01
+        for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+          var cz = CONTROLLERS[ci];
+          if (cz.zonas) for (var zi2 = 0; zi2 < cz.zonas.length; zi2++) {
+            cz.zonas[zi2].z = normZonaId(cz.zonas[zi2].z);
+          }
+        }
         PROGRAMS    = data.programs    || PROGRAMS;
         TEMPLATES   = data.templates   || TEMPLATES;
         if (data.climaThresholds && CLIMA_THRESHOLDS.frost === 3 && CLIMA_THRESHOLDS.heat === 32) {
@@ -4138,8 +4217,8 @@ function getNormalizedZonas(ev) {
   for (var zi = 0; zi < raw.length; zi++) {
     var z = raw[zi];
     result.push({
-      id:       z.id   !== undefined ? z.id   : (z.z !== undefined ? String(z.z) : String(zi+1)),
-      label:    z.label || z.desc || ("Z" + (z.id || z.z || (zi+1))),
+      id:       z.id   !== undefined ? normZonaId(String(z.id))   : (z.z !== undefined ? normZonaId(String(z.z)) : String(zi+1)),
+      label:    (function(zz){ var idR = zz.id !== undefined ? zz.id : (zz.z !== undefined ? zz.z : zi+1); var desc = zz.desc || ""; if (zz.label && !/^ZZ/i.test(zz.label)) return zz.label; return zonaLabel(idR, desc); })(z),
       min:      z.min   !== undefined ? z.min   : 0,
       minReal:  z.minReal !== undefined ? z.minReal : (z.min || 0),
       ejecutado: z.ejecutado !== undefined ? z.ejecutado : true,
@@ -4527,7 +4606,7 @@ function buildCtrlPrintList() {
   for (var i = 0; i < sorted.length; i++) {
     var c = sorted[i];
     var sel = ctrlPrintSelected.has(c.n);
-    var zonaList = c.zonas.map(function(z){ return "Z"+z.z+" "+z.desc; }).join(" · ").slice(0,60);
+    var zonaList = c.zonas.map(function(z){ return zonaLabel(z.z, z.desc); }).join(" · ").slice(0,60);
     html += '<div onclick="ctrlPrintToggle(' + c.n + ')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;border:1px solid ' + (sel ? "var(--green)" : "var(--border)") + ';background:' + (sel ? "var(--green-dim)" : "var(--panel)") + '">';
     html += '<div style="width:18px;height:18px;border-radius:4px;border:2px solid ' + (sel ? "var(--green)" : "var(--border)") + ';background:' + (sel ? "var(--green)" : "transparent") + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
     html += sel ? '<span style="color:#000;font-size:11px;font-weight:900;line-height:1">✓</span>' : "";
@@ -4609,7 +4688,7 @@ function _doPrintControllers(filtered, subtitle) {
         if (up.zonasConMin && up.zonasConMin.length > 0) {
           for (var zi = 0; zi < up.zonasConMin.length; zi++) {
             var zz = up.zonasConMin[zi];
-            zonaChips2 += '<span class="zona-chip"><span class="zona-num">Z'+zz.id+'</span> <span class="zona-min">'+zz.min+'min</span></span>';
+            zonaChips2 += '<span class="zona-chip"><span class="zona-num">Z'+normZonaId(zz.id)+'</span> <span class="zona-min">'+zz.min+'min</span></span>';
           }
         }
         html += '<tr>';
@@ -5199,7 +5278,7 @@ function rexGetSelectedZonas() {
     var cb = document.getElementById("rex-z-cb-" + z.z);
     var inp= document.getElementById("rex-z-min-" + z.z);
     if (cb && cb.checked) {
-      zonas.push({ id: z.z, label: "Z" + z.z + " " + (z.desc || ""), min: parseInt(inp ? inp.value : 0, 10) || 0 });
+      zonas.push({ id: normZonaId(z.z), label: zonaLabel(z.z, z.desc), min: parseInt(inp ? inp.value : 0, 10) || 0 });
     }
   }
   return zonas;
@@ -5365,7 +5444,7 @@ function buildPlantillasList() {
     var metBadge = t.metodo === "manguera"
       ? '<span style="font-family:var(--font-mono);font-size:0.6rem;background:#1a3a2a;color:#86efac;border:1px solid #22c55e;padding:1px 6px;border-radius:4px">🪣 manguera</span>'
       : '<span style="font-family:var(--font-mono);font-size:0.6rem;background:var(--panel);color:var(--muted);border:1px solid var(--border);padding:1px 6px;border-radius:4px">💧 sistema</span>';
-    var zonasText = t.zonas.map(function(z){ return "Z" + z.id + " " + z.min + "min"; }).join(" · ");
+    var zonasText = t.zonas.map(function(z){ return "Z" + normZonaId(z.id) + " " + z.min + "min"; }).join(" · ");
     html += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">';
     html += '<div style="font-size:1.2rem;flex-shrink:0;margin-top:2px">' + icon + '</div>';
     html += '<div style="flex:1;min-width:0">';
@@ -5661,7 +5740,7 @@ function repImprimir() {
       var ae=allExtras[ai];
       var mIcon=ae.ex.motivo==="helada"?"❄️":ae.ex.motivo==="calor"?"🔥":"➕";
       var metIcon=ae.ex.metodo==="manguera"?"🪣 manguera":"💧 sistema";
-      var zonasTxt=(ae.ex.zonas||[]).map(function(z){return"Z"+z.id+" "+z.min+"min";}).join(", ");
+      var zonasTxt=(ae.ex.zonas||[]).map(function(z){return"Z"+normZonaId(z.id)+" "+z.min+"min";}).join(", ");
       w.document.write('<tr><td style="white-space:nowrap">'+ae.ex.dia+'</td><td>N°'+ae.ctrl.sectorN+' '+ae.ctrl.sectorName+'</td>');
       w.document.write('<td>'+mIcon+' '+(ae.ex.motivo||"otro")+'</td><td>'+metIcon+'</td>');
       w.document.write('<td class="num">'+ae.ex.dur+'</td><td style="font-size:9px">'+zonasTxt+'</td><td style="font-size:9px">'+(ae.ex.notas||"")+'</td></tr>');
@@ -5682,7 +5761,7 @@ function saveTareaJardinero(extra, dateStr) {
     reparacion: "🔧 Sistema en reparación", evento: "⛔ Evento / cancha ocupada", otro: "➕ Otro"
   }[extra.motivo] || extra.motivo;
   var zonasDesc = (extra.zonas || []).map(function(z){
-    return "Z" + z.id + (z.label ? " " + z.label.replace(/^Z[^\s]+\s*/,"").slice(0,20) : "") + " · " + z.min + " min";
+    return "Z" + normZonaId(z.id) + (z.label ? " " + z.label.replace(/^Z[^\s]+\s*/,"").slice(0,20) : "") + " · " + z.min + " min";
   }).join("\n");
   var tarea = {
     id:          extra.id,
@@ -5958,7 +6037,7 @@ function buildEtiqueta(c, fecha) {
       var zonasStr = "";
       if (p.zonasConMin && p.zonasConMin.length) {
         zonasStr = p.zonasConMin.map(function(z){
-          return "Z" + z.id + " " + z.min + "m";
+          return "Z" + normZonaId(z.id) + " " + z.min + "m";
         }).join(" · ");
       }
       html += '<div class="prog-row" style="' + (compact ? "margin-bottom:0.3mm;" : "") + '">';
