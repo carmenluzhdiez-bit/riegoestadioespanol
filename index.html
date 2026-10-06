@@ -2805,8 +2805,9 @@ var selectedPrograma = "A";
 function buildEditor() {
   var sel = document.getElementById("ed-sector");
   var html = "";
-  for (var i = 0; i < CONTROLLERS.length; i++) {
-    var c = CONTROLLERS[i];
+  var ctrlSorted = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  for (var i = 0; i < ctrlSorted.length; i++) {
+    var c = ctrlSorted[i];
     html += '<option value="' + c.n + '">N° ' + c.n + ' · ' + c.name + '</option>';
   }
   sel.innerHTML = html;
@@ -3599,8 +3600,9 @@ function renderControllers() {
   var grid = document.getElementById("ctrl-grid");
   if (!grid) return;
   var html = "";
-  for (var ci = 0; ci < CONTROLLERS.length; ci++) {
-    var c = CONTROLLERS[ci];
+  var sortedCtrl = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  for (var ci = 0; ci < sortedCtrl.length; ci++) {
+    var c = sortedCtrl[ci];
     if (ctrlCanalFilter !== "all" && c.canal !== ctrlCanalFilter) continue;
     if (search) {
       var match = c.name.toLowerCase().indexOf(search) >= 0 || String(c.n).indexOf(search) >= 0;
@@ -5071,8 +5073,9 @@ function openRiegoExtraModal(editId) {
   rexPopularPlantillas();
   var sel = document.getElementById("rex-sector");
   sel.innerHTML = "";
-  for (var i = 0; i < CONTROLLERS.length; i++) {
-    var c = CONTROLLERS[i];
+  var rexSorted = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  for (var i = 0; i < rexSorted.length; i++) {
+    var c = rexSorted[i];
     var opt = document.createElement("option");
     opt.value = c.n;
     opt.textContent = "N°" + c.n + " · " + c.name;
