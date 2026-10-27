@@ -2282,6 +2282,16 @@ function buildPMR() {
     var dayStatus = getDayStatus(todayDateStr);
     var todayProgs = getProjectedEntries(todayIdx);
 
+    // DEBUG temporal — ver en consola
+    console.log("=== DEBUG buildPMR ===");
+    console.log("todayDateStr:", todayDateStr, "dayStatus:", dayStatus);
+    console.log("todayProgs count:", todayProgs.length);
+    for (var dbgi = 0; dbgi < todayProgs.length; dbgi++) {
+      var dbgp = todayProgs[dbgi];
+      console.log("  prog:", dbgp.sectorN, dbgp.sectorName, "pg:", dbgp.programa, "zonas:", dbgp.zonas ? dbgp.zonas.length : 0, "zonasConMin:", JSON.stringify(dbgp.zonas));
+    }
+    console.log("HISTORY[today]:", JSON.stringify(hoyH));
+
     // Mapa: controlador → lista de programas proyectados hoy
     var ctrlProgMap = {};
     for (var pi = 0; pi < todayProgs.length; pi++) {
