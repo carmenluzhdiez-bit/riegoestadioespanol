@@ -2282,97 +2282,91 @@ function buildPMR() {
     var dayStatus = getDayStatus(todayDateStr);
     var todayProgs = getProjectedEntries(todayIdx);
 
-    // DEBUG temporal — ver en consola
-    console.log("=== DEBUG buildPMR ===");
-    console.log("todayDateStr:", todayDateStr, "dayStatus:", dayStatus);
-    console.log("todayProgs count:", todayProgs.length);
-    for (var dbgi = 0; dbgi < todayProgs.length; dbgi++) {
-      var dbgp = todayProgs[dbgi];
-      console.log("  prog:", dbgp.sectorN, dbgp.sectorName, "pg:", dbgp.programa, "zonas:", dbgp.zonas ? dbgp.zonas.length : 0, "zonasConMin:", JSON.stringify(dbgp.zonas));
-    }
-    console.log("HISTORY[today]:", JSON.stringify(hoyH));
-
-    // Mapa: controlador → lista de programas proyectados hoy
-    var ctrlProgMap = {};
-    for (var pi = 0; pi < todayProgs.length; pi++) {
-      var ep = todayProgs[pi];
-      if (!ctrlProgMap[ep.sectorN]) ctrlProgMap[ep.sectorN] = [];
-      ctrlProgMap[ep.sectorN].push(ep);
-    }
-
-    // Revisión de suspensiones: preventivas (prevSuspended) + historial (ejecutado)
-    var ctrlSuspRazon = {}; // sectorN → razón ("lluvia" | "prev" | "manual")
-
-    // 1. Suspensiones preventivas (antes del riego) — prevSuspended = ["sectorN_pg", ...]
+    // Set de claves suspendidas preventivamente: "sectorN_programa"
+    var prevSuspSet = {};
     if (hoyH && hoyH.prevSuspended) {
       for (var psi = 0; psi < hoyH.prevSuspended.length; psi++) {
-        var psKey = hoyH.prevSuspended[psi];
-        var psSn = parseInt(psKey.split("_")[0]);
-        if (!isNaN(psSn)) ctrlSuspRazon[psSn] = "prev";
-      }
-    }
-
-    // 2. Suspensiones registradas en historial de ejecución
-    if (hoyH && hoyH.entries) {
-      for (var ei = 0; ei < hoyH.entries.length; ei++) {
-        var he = hoyH.entries[ei];
-        if (he.ejecutado === "lluvia") {
-          if (!ctrlSuspRazon[he.sectorN]) ctrlSuspRazon[he.sectorN] = "lluvia";
-        } else if (he.ejecutado === false) {
-          if (!ctrlSuspRazon[he.sectorN]) ctrlSuspRazon[he.sectorN] = "manual";
-        }
+        prevSuspSet[hoyH.prevSuspended[psi]] = true;
       }
     }
 
     // Si el día entero está suspendido por lluvia
     var diaLluvia = (dayStatus === "lluvia");
 
-    // Controladores CON programa hoy
-    var ctrlsConPrograma = Object.keys(ctrlProgMap);
-    for (var ki = 0; ki < ctrlsConPrograma.length; ki++) {
-      var sn = parseInt(ctrlsConPrograma[ki]);
-      var progs = ctrlProgMap[sn];
-      // Nombre del controlador
-      var ctrlName = "";
-      for (var ci2 = 0; ci2 < CONTROLLERS.length; ci2++) {
-        if (CONTROLLERS[ci2].n === sn) { ctrlName = CONTROLLERS[ci2].name; break; }
+    // Analizar programa por programa
+    // Acumular por controlador: zonas activas, zonas suspendidas, razones
+    var ctrlMap = {}; // sectorN → {name, zonasActivas, zonasSusp, tieneActivo, tieneSusp, razonesSet}
+    for (var pi = 0; pi < todayProgs.length; pi++) {
+      var ep = todayProgs[pi];
+      var sn = ep.sectorN;
+      if (!ctrlMap[sn]) {
+        var cname = "";
+        for (var ci2 = 0; ci2 < CONTROLLERS.length; ci2++) {
+          if (CONTROLLERS[ci2].n === sn) { cname = CONTROLLERS[ci2].name; break; }
+        }
+        ctrlMap[sn] = { name: cname, zonasActivas: 0, zonasSusp: 0, tieneActivo: false, tieneSusp: false, razonesSet: {} };
       }
-      // Contar zonas únicas
-      var zonasSet = {};
-      for (var pri = 0; pri < progs.length; pri++) {
-        var pr = progs[pri];
-        if (pr.zonas && pr.zonas.length > 0) {
-          for (var zi3 = 0; zi3 < pr.zonas.length; zi3++) zonasSet[pr.zonas[zi3].id] = true;
+      var cm = ctrlMap[sn];
+      var nz = ep.zonas ? ep.zonas.length : 0;
+      var pgKey = sn + "_" + (ep.programa || "");
+
+      // ¿Está suspendido este programa?
+      var suspRazon = null;
+      if (diaLluvia) {
+        suspRazon = "lluvia";
+      } else if (prevSuspSet[pgKey]) {
+        suspRazon = "prev";
+      } else if (hoyH && hoyH.entries) {
+        for (var ei = 0; ei < hoyH.entries.length; ei++) {
+          var he = hoyH.entries[ei];
+          if (he.sectorN === sn && he.programId === ep.programId) {
+            if (he.ejecutado === "lluvia") { suspRazon = "lluvia"; break; }
+            if (he.ejecutado === false)    { suspRazon = "manual"; break; }
+          }
         }
       }
-      var nZonas = Object.keys(zonasSet).length;
 
-      var razon = "";
-      var estado = "activo";
-      if (diaLluvia) {
-        estado = "susp-lluvia"; razon = "suspendido por lluvia";
-        hoyResumen.suspDia++;
-      } else if (ctrlSuspRazon[sn] === "lluvia") {
-        estado = "susp-lluvia"; razon = "suspendido por lluvia";
-        hoyResumen.suspLluvia++;
-      } else if (ctrlSuspRazon[sn] === "prev") {
-        estado = "susp-prev"; razon = "suspendido preventivamente";
-        hoyResumen.suspManual++;
-      } else if (ctrlSuspRazon[sn] === "manual") {
-        estado = "susp-manual"; razon = "suspendido manualmente";
-        hoyResumen.suspManual++;
+      if (suspRazon) {
+        cm.zonasSusp += nz;
+        cm.tieneSusp = true;
+        cm.razonesSet[suspRazon] = true;
       } else {
-        hoyResumen.conRiego++;
+        cm.zonasActivas += nz;
+        cm.tieneActivo = true;
       }
-      hoyCtrlDetalle.push({ n: sn, name: ctrlName, estado: estado, razon: razon, zonas: nZonas, programas: progs.length });
+    }
+
+    // Consolidar por controlador
+    var ctrlsConPrograma = Object.keys(ctrlMap);
+    for (var ki = 0; ki < ctrlsConPrograma.length; ki++) {
+      var sn2 = parseInt(ctrlsConPrograma[ki]);
+      var cm2 = ctrlMap[sn2];
+      var estado = "activo";
+      var razon = "";
+      if (cm2.tieneActivo && cm2.tieneSusp) {
+        estado = "parcial";
+        razon = "parcialmente suspendido";
+      } else if (!cm2.tieneActivo && cm2.tieneSusp) {
+        var razones = Object.keys(cm2.razonesSet);
+        if (razones.indexOf("lluvia") >= 0) { estado = "susp-lluvia"; razon = "suspendido por lluvia"; }
+        else if (razones.indexOf("prev") >= 0) { estado = "susp-prev"; razon = "suspendido preventivamente"; }
+        else { estado = "susp-manual"; razon = "suspendido manualmente"; }
+      }
+
+      if (estado === "activo")   hoyResumen.conRiego++;
+      else if (estado === "parcial") { hoyResumen.conRiego++; hoyResumen.suspManual++; } // cuenta en ambos
+      else if (estado === "susp-lluvia") hoyResumen.suspLluvia++;
+      else if (estado === "susp-prev" || estado === "susp-manual") hoyResumen.suspManual++;
+
+      hoyCtrlDetalle.push({ n: sn2, name: cm2.name, estado: estado, razon: razon, zonasActivas: cm2.zonasActivas, zonasSusp: cm2.zonasSusp });
     }
 
     // Controladores SIN programa hoy
     for (var ci3 = 0; ci3 < CONTROLLERS.length; ci3++) {
       var c3 = CONTROLLERS[ci3];
-      if (!ctrlProgMap[c3.n]) {
+      if (!ctrlMap[c3.n]) {
         hoyResumen.sinRiego++;
-        hoyCtrlDetalle.push({ n: c3.n, name: c3.name, estado: "sin-riego", razon: "sin programa hoy", zonas: 0, programas: 0 });
+        hoyCtrlDetalle.push({ n: c3.n, name: c3.name, estado: "sin-riego", razon: "sin programa hoy", zonasActivas: 0, zonasSusp: 0 });
       }
     }
     hoyCtrlDetalle.sort(function(a, b) { return a.n - b.n; });
@@ -2392,8 +2386,8 @@ function buildPMR() {
     // Contar zonas activas y suspendidas
     var zonasActivas = 0, zonasSusp = 0;
     for (var di2 = 0; di2 < hoyCtrlDetalle.length; di2++) {
-      if (hoyCtrlDetalle[di2].estado === "activo") zonasActivas += hoyCtrlDetalle[di2].zonas;
-      else if (hoyCtrlDetalle[di2].estado !== "sin-riego") zonasSusp += hoyCtrlDetalle[di2].zonas;
+      zonasActivas += hoyCtrlDetalle[di2].zonasActivas || 0;
+      zonasSusp    += hoyCtrlDetalle[di2].zonasSusp    || 0;
     }
 
     // Card: Riegan hoy
