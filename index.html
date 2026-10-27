@@ -2290,15 +2290,30 @@ function buildPMR() {
       ctrlProgMap[ep.sectorN].push(ep);
     }
 
-    // Revisión de suspensiones en historial
-    var ctrlSuspRazon = {}; // sectorN → razón
+    // Revisión de suspensiones: preventivas (prevSuspended) + historial (ejecutado)
+    var ctrlSuspRazon = {}; // sectorN → razón ("lluvia" | "prev" | "manual")
+
+    // 1. Suspensiones preventivas (antes del riego) — prevSuspended = ["sectorN_pg", ...]
+    if (hoyH && hoyH.prevSuspended) {
+      for (var psi = 0; psi < hoyH.prevSuspended.length; psi++) {
+        var psKey = hoyH.prevSuspended[psi];
+        var psSn = parseInt(psKey.split("_")[0]);
+        if (!isNaN(psSn)) ctrlSuspRazon[psSn] = "prev";
+      }
+    }
+
+    // 2. Suspensiones registradas en historial de ejecución
     if (hoyH && hoyH.entries) {
       for (var ei = 0; ei < hoyH.entries.length; ei++) {
         var he = hoyH.entries[ei];
-        if (he.ejecutado === "lluvia") ctrlSuspRazon[he.sectorN] = "lluvia";
-        else if (he.ejecutado === false) ctrlSuspRazon[he.sectorN] = "manual";
+        if (he.ejecutado === "lluvia") {
+          if (!ctrlSuspRazon[he.sectorN]) ctrlSuspRazon[he.sectorN] = "lluvia";
+        } else if (he.ejecutado === false) {
+          if (!ctrlSuspRazon[he.sectorN]) ctrlSuspRazon[he.sectorN] = "manual";
+        }
       }
     }
+
     // Si el día entero está suspendido por lluvia
     var diaLluvia = (dayStatus === "lluvia");
 
@@ -2330,6 +2345,9 @@ function buildPMR() {
       } else if (ctrlSuspRazon[sn] === "lluvia") {
         estado = "susp-lluvia"; razon = "suspendido por lluvia";
         hoyResumen.suspLluvia++;
+      } else if (ctrlSuspRazon[sn] === "prev") {
+        estado = "susp-prev"; razon = "suspendido preventivamente";
+        hoyResumen.suspManual++;
       } else if (ctrlSuspRazon[sn] === "manual") {
         estado = "susp-manual"; razon = "suspendido manualmente";
         hoyResumen.suspManual++;
@@ -2361,19 +2379,23 @@ function buildPMR() {
   );
 
   if (todayIdx >= 0) {
+    // Contar zonas activas y suspendidas
+    var zonasActivas = 0, zonasSusp = 0;
+    for (var di2 = 0; di2 < hoyCtrlDetalle.length; di2++) {
+      if (hoyCtrlDetalle[di2].estado === "activo") zonasActivas += hoyCtrlDetalle[di2].zonas;
+      else if (hoyCtrlDetalle[di2].estado !== "sin-riego") zonasSusp += hoyCtrlDetalle[di2].zonas;
+    }
+
     // Card: Riegan hoy
     var conRiegoHtml = '<div style="display:flex;align-items:baseline;gap:5px;margin:2px 0">';
     conRiegoHtml += '<span class="value v-green" style="font-size:1.5rem">' + hoyResumen.conRiego + '</span>';
     conRiegoHtml += '<span class="sub" style="font-size:0.65rem">de ' + CONTROLLERS.length + ' ctrl.</span>';
     conRiegoHtml += '</div>';
-    // Contar zonas activas
-    var zonasActivas = 0;
-    for (var di2 = 0; di2 < hoyCtrlDetalle.length; di2++) {
-      if (hoyCtrlDetalle[di2].estado === "activo") zonasActivas += hoyCtrlDetalle[di2].zonas;
-    }
+    var subActivo = zonasActivas > 0
+      ? zonasActivas + " zona" + (zonasActivas !== 1 ? "s" : "") + " activa" + (zonasActivas !== 1 ? "s" : "")
+      : "sin zonas programadas";
     statsHtml += div("stat-card",
-      lbl("💧 Riegan hoy") + conRiegoHtml +
-      sub(zonasActivas > 0 ? zonasActivas + " zona" + (zonasActivas !== 1 ? "s" : "") + " activas" : "sin zonas programadas")
+      lbl("💧 Riegan hoy") + conRiegoHtml + sub(subActivo)
     );
 
     // Card: Suspendidos (siempre visible)
@@ -2387,12 +2409,14 @@ function buildPMR() {
     }
     suspHtml += '</div>';
     var suspRazones = [];
-    if (hoyResumen.suspDia > 0)         suspRazones.push("🌧 día completo");
-    else if (hoyResumen.suspLluvia > 0) suspRazones.push("🌧 " + hoyResumen.suspLluvia + " por lluvia");
-    if (hoyResumen.suspManual > 0)      suspRazones.push("✋ " + hoyResumen.suspManual + " manual");
+    if (hoyResumen.suspDia > 0)          suspRazones.push("🌧 día completo");
+    else if (hoyResumen.suspLluvia > 0)  suspRazones.push("🌧 " + hoyResumen.suspLluvia + " por lluvia");
+    if (hoyResumen.suspManual > 0)       suspRazones.push("⏸ " + hoyResumen.suspManual + " preventivo/manual");
+    var subSusp = suspRazones.length > 0
+      ? suspRazones.join(" · ") + (zonasSusp > 0 ? " · " + zonasSusp + " zona" + (zonasSusp !== 1 ? "s" : "") + " suspendida" + (zonasSusp !== 1 ? "s" : "") : "")
+      : "todos operativos";
     statsHtml += div("stat-card",
-      lbl("⏸ Suspendidos hoy") + suspHtml +
-      sub(suspRazones.length > 0 ? suspRazones.join(" · ") : "todos operativos")
+      lbl("⏸ Suspendidos hoy") + suspHtml + sub(subSusp)
     );
 
     // Card: Sin riego hoy (siempre visible)
