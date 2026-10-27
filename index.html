@@ -2372,34 +2372,35 @@ function buildPMR() {
       if (hoyCtrlDetalle[di2].estado === "activo") zonasActivas += hoyCtrlDetalle[di2].zonas;
     }
     statsHtml += div("stat-card",
-      lbl("🌿 Riegan hoy") + conRiegoHtml +
+      lbl("💧 Riegan hoy") + conRiegoHtml +
       sub(zonasActivas > 0 ? zonasActivas + " zona" + (zonasActivas !== 1 ? "s" : "") + " activas" : "sin zonas programadas")
     );
 
-    // Card: Suspendidos
+    // Card: Suspendidos (siempre visible)
+    var suspHtml = '<div style="display:flex;align-items:baseline;gap:5px;margin:2px 0">';
     if (totalSusp > 0) {
-      var suspHtml = '<div style="display:flex;align-items:baseline;gap:5px;margin:2px 0">';
       suspHtml += '<span class="value v-amber" style="font-size:1.5rem">' + totalSusp + '</span>';
       suspHtml += '<span class="sub" style="font-size:0.65rem">ctrl. suspendidos</span>';
-      suspHtml += '</div>';
-      var suspRazones = [];
-      if (hoyResumen.suspDia > 0)    suspRazones.push("🌧 día completo suspendido");
-      else if (hoyResumen.suspLluvia > 0) suspRazones.push("🌧 " + hoyResumen.suspLluvia + " por lluvia");
-      if (hoyResumen.suspManual > 0)  suspRazones.push("✋ " + hoyResumen.suspManual + " manual");
-      statsHtml += div("stat-card",
-        lbl("⏸ Suspendidos hoy") + suspHtml +
-        sub(suspRazones.join(" · "))
-      );
+    } else {
+      suspHtml += '<span class="value v-green" style="font-size:1.5rem">0</span>';
+      suspHtml += '<span class="sub" style="font-size:0.65rem">ninguno</span>';
     }
+    suspHtml += '</div>';
+    var suspRazones = [];
+    if (hoyResumen.suspDia > 0)         suspRazones.push("🌧 día completo");
+    else if (hoyResumen.suspLluvia > 0) suspRazones.push("🌧 " + hoyResumen.suspLluvia + " por lluvia");
+    if (hoyResumen.suspManual > 0)      suspRazones.push("✋ " + hoyResumen.suspManual + " manual");
+    statsHtml += div("stat-card",
+      lbl("⏸ Suspendidos hoy") + suspHtml +
+      sub(suspRazones.length > 0 ? suspRazones.join(" · ") : "todos operativos")
+    );
 
-    // Card: Sin riego hoy
-    if (hoyResumen.sinRiego > 0) {
-      statsHtml += div("stat-card",
-        lbl("Sin riego hoy") +
-        val("v-muted", hoyResumen.sinRiego) +
-        sub("ctrl. sin programa este día")
-      );
-    }
+    // Card: Sin riego hoy (siempre visible)
+    statsHtml += div("stat-card",
+      lbl("Sin riego hoy") +
+      val(hoyResumen.sinRiego > 0 ? "v-muted" : "v-green", hoyResumen.sinRiego) +
+      sub(hoyResumen.sinRiego > 0 ? "ctrl. sin programa este día" : "todos tienen programa")
+    );
   } else {
     statsHtml += div("stat-card",
       lbl("Riego hoy") +
