@@ -6726,14 +6726,37 @@ function printCheckin() {
   }
 
   var ctrls = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
-  var CIRC = '<div style="width:8px;height:8px;border:1.2px solid #2d6a0a;border-radius:50%;margin:auto"></div>';
-  var BRD  = "border:1px solid #c8e6b0;";
-  var TD   = "padding:0.5px 2px;" + BRD + "font-size:5.5pt;vertical-align:middle;";
-  var OBS  = '<div style="border-bottom:1px solid #bbb;height:7px;margin:1px 2px"></div>';
 
-  // TABLA PLANA — una fila por zona, cero rowspan
-  // Cols: N° | Ctrl | Pg | Zona | Días | Hora | Dur' | ✓Días | ✓Hora | ✓Dur | Obs
-  var filas = "";
+  // Círculo para marcar con plumón
+  var CIRC = '<div style="width:9px;height:9px;border:1.5px solid #2d6a0a;border-radius:50%;margin:auto"></div>';
+
+  // ── Estilos ──────────────────────────────────────────────────────────────
+  var css = '@page{size:A4 portrait;margin:7mm 8mm 6mm 8mm}'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:6pt;color:#111;background:#fff}'
+    + '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #4a8c1c;padding-bottom:3px;margin-bottom:3px}'
+    + '.marca{font-size:10pt;font-weight:900;color:#2d6a0a;line-height:1.2}'
+    + '.tt{text-align:right}'
+    + '.tt b{font-size:9pt;font-weight:900;color:#2d6a0a;display:block}'
+    + '.tt span{font-size:5pt;color:#666}'
+    + '.meta{display:flex;gap:4px;margin-bottom:3px}'
+    + '.mb{border:1px solid #4a8c1c;border-radius:2px;padding:1px 6px;flex:1}'
+    + '.mb .l{font-size:4.5pt;color:#888;text-transform:uppercase;letter-spacing:.3px}'
+    + '.mb .v{font-size:7pt;font-weight:700;color:#2d6a0a;min-height:10px}'
+    + '.ctrl-bloque{margin-bottom:4px;page-break-inside:avoid}'
+    + '.ctrl-titulo{background:#2d6a0a;color:#fff;padding:3px 7px;font-size:7.5pt;font-weight:900;display:flex;justify-content:space-between;align-items:center;border-radius:2px 2px 0 0}'
+    + '.ctrl-subtit{font-size:5pt;font-weight:400;opacity:.85}'
+    + '.ctrl-dur{font-size:6pt;font-weight:700;background:rgba(255,255,255,.18);padding:1px 5px;border-radius:2px}'
+    + 'table.zt{width:100%;border-collapse:collapse;border:1px solid #b8dda0}'
+    + 'table.zt th{background:#e8f5d8;color:#1e5c06;font-size:5.5pt;padding:2px 4px;border:1px solid #c8e6b0;text-align:center}'
+    + 'table.zt th.lft{text-align:left}'
+    + 'table.zt td{font-size:6pt;padding:2px 4px;border:1px solid #dcefd0;vertical-align:middle}'
+    + 'table.zt tr:nth-child(even){background:#f6fbf0}'
+    + '.bomba-aviso{margin-top:4px;border:1px solid #c8e6b0;border-radius:2px;padding:2px 6px;background:#f4fbed;font-size:4.8pt;line-height:1.7}'
+    + '.ft{margin-top:3px;display:flex;justify-content:space-between;font-size:4pt;color:#aaa;border-top:1px solid #e0e0e0;padding-top:1px}';
+
+  // ── Construir bloques por controlador ────────────────────────────────────
+  var bloques = "";
 
   for (var i = 0; i < ctrls.length; i++) {
     var c = ctrls[i];
@@ -6741,136 +6764,118 @@ function printCheckin() {
     var progs = PROGRAMS.filter(function(p){ return p.sectorN === c.n; });
     progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
 
-    // Fila separadora verde — sin rowspan
-    filas += '<tr style="background:#4a8c1c;page-break-inside:avoid">'
-      + '<td colspan="11" style="padding:2px 6px;font-weight:800;font-size:6pt;color:#fff;border:1px solid #2d6a0a">'
-      + c.n + ' · ' + c.name
-      + (bomba ? ' <span style="font-weight:400;font-size:5pt;opacity:.85">· ' + bomba + '</span>' : '')
-      + '</td></tr>';
+    // Calcular tiempo total del controlador (suma de todos los min de zonas)
+    var totalMin = 0;
+    for (var pi = 0; pi < progs.length; pi++) {
+      var zs = progs[pi].zonasConMin || [];
+      for (var zi2 = 0; zi2 < zs.length; zi2++) {
+        totalMin += (zs[zi2].min || 0);
+      }
+      if (zs.length === 0 && progs[pi].dur) totalMin += progs[pi].dur;
+    }
+    var totalStr = totalMin > 0 ? (totalMin >= 60 ? Math.floor(totalMin/60)+"h " + (totalMin%60 > 0 ? totalMin%60+"'" : "") : totalMin+"'") : "—";
+
+    // Título del bloque
+    bloques += '<div class="ctrl-bloque">'
+      + '<div class="ctrl-titulo">'
+      + '<span>N°' + c.n + ' &nbsp;·&nbsp; ' + c.name + (bomba ? ' &nbsp;<span class="ctrl-subtit">· ' + bomba + '</span>' : '') + '</span>'
+      + '<span class="ctrl-dur">T° total: ' + totalStr + '</span>'
+      + '</div>';
 
     if (progs.length === 0) {
-      filas += '<tr><td colspan="11" style="' + TD + 'font-style:italic;color:#aaa">sin programas</td></tr>';
+      bloques += '<div style="padding:3px 7px;font-size:5.5pt;color:#aaa;background:#fafdf7;border:1px solid #b8dda0;border-top:none;border-radius:0 0 2px 2px">Sin programas registrados</div></div>';
       continue;
     }
 
+    // Tabla de zonas — cols: Zona | Datos PMR (Días · Hora · Dur) | ○Días | ○Hora | ○Dur | ○Próx.riego | Obs
+    bloques += '<table class="zt">'
+      + '<thead><tr>'
+      + '<th class="lft" style="width:auto">Zona</th>'
+      + '<th style="width:90px">Datos PMR</th>'
+      + '<th style="width:20px">○<br>Días</th>'
+      + '<th style="width:20px">○<br>Hora</th>'
+      + '<th style="width:20px">○<br>Dur</th>'
+      + '<th style="width:24px">○<br>Próx.</th>'
+      + '<th class="lft" style="width:60px">Observación</th>'
+      + '</tr></thead><tbody>';
+
     for (var j = 0; j < progs.length; j++) {
       var pg = progs[j];
-      var diasStr   = buildDaysLabel(pg);
-      var horaStr   = ciMinToHora(pg.start !== undefined ? pg.start : 0);
-      var zonas     = pg.zonasConMin || [];
-      var bgPg      = j % 2 === 0 ? "#fff" : "#f4fbed";
+      var diasStr = buildDaysLabel(pg);
+      var horaStr = ciMinToHora(pg.start !== undefined ? pg.start : 0);
+      var zonas   = pg.zonasConMin || [];
 
       if (zonas.length === 0) {
+        // Programa sin zonas → una fila genérica
         var durStr = pg.dur ? pg.dur + "'" : "—";
-        filas += '<tr style="background:' + bgPg + ';border-bottom:1px solid #d4ecc0">'
-          + '<td style="' + TD + 'text-align:center;color:#666">' + c.n + '</td>'
-          + '<td style="' + TD + 'color:#555;font-size:5pt">' + c.name + '</td>'
-          + '<td style="' + TD + 'text-align:center;font-weight:700;color:#2d6a0a">' + pg.programa + '</td>'
-          + '<td style="' + TD + 'color:#333">—</td>'
-          + '<td style="' + TD + 'text-align:center;color:#444">' + diasStr + '</td>'
-          + '<td style="' + TD + 'text-align:center;font-family:monospace">' + horaStr + '</td>'
-          + '<td style="' + TD + 'text-align:center;font-family:monospace">' + durStr + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + '">' + OBS + '</td>'
+        bloques += '<tr>'
+          + '<td style="color:#aaa;font-style:italic">' + pg.programa + ' (sin zonas)</td>'
+          + '<td style="font-size:5pt;color:#666;text-align:center">' + diasStr + ' · ' + horaStr + ' · ' + durStr + '</td>'
+          + '<td style="text-align:center">' + CIRC + '</td>'
+          + '<td style="text-align:center">' + CIRC + '</td>'
+          + '<td style="text-align:center">' + CIRC + '</td>'
+          + '<td style="text-align:center">' + CIRC + '</td>'
+          + '<td></td>'
           + '</tr>';
         continue;
       }
 
-      // Una fila por zona
       for (var zi = 0; zi < zonas.length; zi++) {
         var zz   = zonas[zi];
         var zId  = "Z" + normZonaId(zz.id);
         var zNom = (zz.label || zId).replace(/^Z[^\s]+\s*/, "");
         var zMin = zz.min ? zz.min + "'" : "—";
-        var bgZ  = zi % 2 === 0 ? bgPg : (bgPg === "#fff" ? "#f9fdf5" : "#edf7e4");
-        var bBtm = zi === zonas.length - 1 ? "2px solid #b8dda0" : "1px solid #e0f0d0";
-        filas += '<tr style="background:' + bgZ + ';border-bottom:' + bBtm + '">'
-          + '<td style="' + TD + 'text-align:center;color:#666">' + (zi===0 ? c.n : '') + '</td>'
-          + '<td style="' + TD + 'color:#555;font-size:5pt">' + (zi===0 ? c.name : '') + '</td>'
-          + '<td style="' + TD + 'text-align:center;font-weight:700;color:#2d6a0a">' + (zi===0 ? pg.programa : '') + '</td>'
-          + '<td style="' + TD + '"><b style="color:#2d6a0a">' + zId + '</b> ' + zNom + '</td>'
-          + '<td style="' + TD + 'text-align:center;color:#444">' + (zi===0 ? diasStr : '') + '</td>'
-          + '<td style="' + TD + 'text-align:center;font-family:monospace">' + (zi===0 ? horaStr : '') + '</td>'
-          + '<td style="' + TD + 'text-align:center;font-family:monospace;font-weight:700;color:#2d6a0a">' + zMin + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + (zi===0 ? CIRC : '') + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
-          + '<td style="' + TD + '">' + OBS + '</td>'
+        // En la primera zona del programa mostramos datos del programa; el resto solo la zona
+        var datosCell = zi === 0
+          ? '<span style="font-size:5pt;color:#555">' + diasStr + '</span>'
+            + ' <span style="font-size:4.5pt;color:#888">·</span> '
+            + '<span style="font-size:5.5pt;font-family:monospace">' + horaStr + '</span>'
+            + ' <span style="font-size:4.5pt;color:#888">·</span> '
+            + '<span style="color:#2d6a0a;font-weight:700">' + zMin + '</span>'
+          : '<span style="color:#2d6a0a;font-weight:700">' + zMin + '</span>';
+        bloques += '<tr>'
+          + '<td><b style="color:#2d6a0a;font-size:5.5pt">' + zId + '</b> ' + zNom + '</td>'
+          + '<td style="text-align:center">' + datosCell + '</td>'
+          + '<td style="text-align:center">' + (zi===0 ? CIRC : '') + '</td>'
+          + '<td style="text-align:center">' + (zi===0 ? CIRC : '') + '</td>'
+          + '<td style="text-align:center">' + CIRC + '</td>'
+          + '<td style="text-align:center">' + CIRC + '</td>'
+          + '<td style="border-bottom:1px solid #ccc"></td>'
           + '</tr>';
       }
     }
+
+    bloques += '</tbody></table></div>';
   }
 
-  var THEAD = '<thead><tr style="background:#2d6a0a;color:#fff">'
-    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">N°</th>'
-    + '<th style="text-align:left;padding:2px 3px;border:1px solid #1e4d06;font-size:5pt;width:55px">Controlador</th>'
-    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Pg</th>'
-    + '<th style="text-align:left;padding:2px 3px;border:1px solid #1e4d06;font-size:5pt">Zona</th>'
-    + '<th style="width:42px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Días/Frec</th>'
-    + '<th style="width:28px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Hora</th>'
-    + '<th style="width:22px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Dur\'</th>'
-    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4pt">✓/✗<br>RainBird</th>'
-    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4.5pt">✓<br>Días</th>'
-    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4.5pt">✓<br>Hora</th>'
-    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4.5pt">✓<br>Dur</th>'
-    + '<th style="text-align:left;padding:2px 3px;border:1px solid #1e4d06;font-size:5pt">Observación / vs RainBird</th>'
-    + '</tr></thead>';
-
-  var css = '@page{size:A4 portrait;margin:6mm 8mm 5mm 8mm}'
-    + '*{box-sizing:border-box;margin:0;padding:0}'
-    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:5.8pt;color:#111;background:#fff}'
-    + '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #4a8c1c;padding-bottom:2px;margin-bottom:2px}'
-    + '.marca{font-size:9pt;font-weight:900;color:#2d6a0a;line-height:1.2}'
-    + '.tt{text-align:right}'
-    + '.tt b{font-size:8pt;font-weight:900;color:#2d6a0a;display:block}'
-    + '.tt span{font-size:4.8pt;color:#666}'
-    + '.meta{display:flex;gap:3px;margin-bottom:2px}'
-    + '.mb{border:1px solid #4a8c1c;border-radius:2px;padding:1px 5px;flex:1}'
-    + '.mb .l{font-size:4pt;color:#888;text-transform:uppercase;letter-spacing:.3px}'
-    + '.mb .v{font-size:6.5pt;font-weight:700;color:#2d6a0a;min-height:9px}'
-    + 'table{width:100%;border-collapse:collapse;table-layout:fixed}'
-    + 'thead{display:table-header-group}'
-    + 'tr{page-break-inside:avoid}'
-    + '.bn{margin-top:3px;border:1px solid #c8e6b0;border-radius:2px;padding:2px 5px;background:#f4fbed;font-size:4.8pt;line-height:1.6}'
-    + '.bn b{color:#2d6a0a;font-size:5pt;display:block;margin-bottom:0}'
-    + '.ins{margin-top:2px;font-size:4.5pt;color:#555;background:#fffbe5;border:1px solid #e8d040;border-radius:2px;padding:1px 5px;line-height:1.4}'
-    + '.ft{margin-top:2px;display:flex;justify-content:space-between;font-size:4.2pt;color:#aaa;border-top:1px solid #ddd;padding-top:1px}';
-
+  // ── Armar ventana de impresión ───────────────────────────────────────────
   var winName = "pmree_checkin_" + Date.now();
-  var w = window.open("", winName, "width=900,height=700");
+  var w = window.open("", winName, "width=860,height=700");
   if (!w) { alert("Permite ventanas emergentes para imprimir."); return; }
-  w.document.open();  // limpia contenido anterior si la ventana fue reutilizada
+  w.document.open();
   w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
     + '<title>Check-in Controladores · PMR EE</title>'
     + '<style>' + css + '</style></head><body>');
 
   w.document.write('<div class="hdr">'
-    + '<div class="marca">ÁREAS VERDES<br><span style="font-size:6.5pt;font-weight:400;color:#555">Departamento · Estadio Español</span></div>'
+    + '<div class="marca">ÁREAS VERDES<br><span style="font-size:7pt;font-weight:400;color:#555">Dpto. · Estadio Español</span></div>'
     + '<div class="tt"><b>CHECK-IN CONTROLADORES DE RIEGO</b>'
-    + '<span>Corroboración en app Rain Bird · 14 controladores ESP-TM2 · plastificado uso con plumón</span></div>'
+    + '<span>Corroboración app Rain Bird · 14 controladores ESP-TM2 · uso con plumón pizarra</span></div>'
     + '</div>');
 
   w.document.write('<div class="meta">'
     + '<div class="mb"><div class="l">Responsable</div><div class="v">' + responsable + '</div></div>'
-    + '<div class="mb" style="flex:0.5"><div class="l">Fecha check-in</div><div class="v">' + semana + '</div></div>'
+    + '<div class="mb" style="flex:0.4"><div class="l">Fecha</div><div class="v">' + semana + '</div></div>'
     + '</div>');
 
-  w.document.write('<table>' + THEAD + '<tbody>' + filas + '</tbody></table>');
+  w.document.write(bloques);
 
-  w.document.write('<div class="bn"><b>⚠ Controladores que comparten bomba — no operar simultáneamente:</b>'
-    + '<span style="margin-right:10px"><b style="color:#2d6a0a">Bomba A:</b> N°4 Alameda · N°5 Piscina</span>'
-    + '<span style="margin-right:10px"><b style="color:#2d6a0a">Bomba B:</b> N°7 Torre 02 Aspersión · N°8 Torre 02 Goteros</span>'
-    + '<span><b style="color:#2d6a0a">Bomba C:</b> N°9 Golf Greenes · N°10 Golf Cancha · N°11 Jardín Infantil Golf</span>'
-    + '</div>');
+  w.document.write('<div class="bomba-aviso"><b style="color:#2d6a0a">⚠ Comparten bomba — no operar simultáneamente:</b>&nbsp;&nbsp;'
+    + '<b>Bomba A:</b> N°4 · N°5 &nbsp;·&nbsp; <b>Bomba B:</b> N°7 · N°8 &nbsp;·&nbsp; <b>Bomba C:</b> N°9 · N°10 · N°11</div>');
 
-  w.document.write('<div class="ins"><b style="color:#8a6800">Instrucciones:</b> Abrir app Rain Bird y comparar cada programa: días, hora inicio y tiempo de riego. Marcar ✓ en cada columna si coincide con lo programado. Anotar diferencias en Observación. Usar plumón de pizarra — limpiar con paño húmedo para reutilizar.</div>');
   w.document.write('<div class="ft">'
-    + '<span>Estadio Español · Departamento de Áreas Verdes · Jefa: Carmen Luz Hermosilla H.</span>'
-    + '<span>PMR EE · Planilla check-in corroboración Rain Bird · A4 plastificado</span>'
+    + '<span>Estadio Español · Áreas Verdes · Carmen Luz Hermosilla H.</span>'
+    + '<span>PMR EE · planilla plastificada · limpiar con paño húmedo</span>'
     + '</div>');
 
   w.document.write('</body></html>');
