@@ -6565,10 +6565,19 @@ function ciMinToHora(min) {
   var m = min % 60;
   return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
 }
-function ciDaysStr(days) {
-  if (!days || days.length===0) return "—";
-  if (days.length===7) return "diario";
-  return days.join("-");
+function ciDaysStr(p) {
+  if (!p) return "—";
+  // Acepta objeto programa completo o array de días legado
+  if (Array.isArray(p)) {
+    if (p.length === 0) return "—";
+    if (p.length === 7) return "diario";
+    return p.join("-");
+  }
+  if (p.freqMode === "intervalo") return "c/" + p.interval + "d";
+  if (p.freqMode === "manual") return "manual";
+  if (!p.days || p.days.length === 0) return "—";
+  if (p.days.length === 7) return "diario";
+  return p.days.join("-");
 }
 
 function buildCheckin() {
@@ -6617,7 +6626,7 @@ function buildCheckin() {
     var okBg0 = st0.ok ? "background:var(--green);color:#000" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
     html += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:var(--amber);font-size:0.7rem">' + p0.programa + '</td>'
       + '<td style="padding:3px 8px;color:var(--text)"><span style="font-weight:700;color:var(--text-dim)">' + c.name + '</span> <span style="color:var(--muted);font-size:0.66rem">— ' + (p0.notes||'') + '</span></td>'
-      + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p0.days) + '</td>'
+      + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p0) + '</td>'
       + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + ciMinToHora(p0.start) + '</td>'
       + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + (p0.dur||'—') + '</td>'
       + '<td style="padding:3px 4px;text-align:center"><button onclick="ciToggleOk(\''+n+'_'+p0.id+'\')" style="width:28px;height:24px;border-radius:6px;border:none;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBg0+'">'+(st0.ok?'✓':'○')+'</button></td>'
@@ -6633,7 +6642,7 @@ function buildCheckin() {
       html += '<tr style="'+bg+';border-bottom:1px solid var(--border)">'
         + '<td style="padding:3px 4px;text-align:center;font-weight:700;color:var(--amber);font-size:0.7rem">' + p.programa + '</td>'
         + '<td style="padding:3px 8px;color:var(--muted);font-size:0.68rem">' + (p.notes||'') + '</td>'
-        + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p.days) + '</td>'
+        + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p) + '</td>'
         + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + ciMinToHora(p.start) + '</td>'
         + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + (p.dur||'—') + '</td>'
         + '<td style="padding:3px 4px;text-align:center"><button onclick="ciToggleOk(\''+n+'_'+p.id+'\')" style="width:28px;height:24px;border-radius:6px;border:none;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBgJ+'">'+(stj.ok?'✓':'○')+'</button></td>'
@@ -6706,10 +6715,7 @@ function printCheckin() {
       var pg = progs[j];
       var bgPg = j % 2 === 0 ? "#fff" : "#f4fbed";
       // Días: mostrar real desde array days
-      var diasStr = "—";
-      if (pg.days && pg.days.length > 0) {
-        diasStr = pg.days.length === 7 ? "diario" : pg.days.join("-");
-      }
+      var diasStr = buildDaysLabel(pg);
       var inicioStr = ciMinToHora(pg.start !== undefined ? pg.start : 0);
       var durStr = pg.dur ? pg.dur + "'" : "—";
       var notesStr = (pg.notes || "").replace(/^PG[A-Z]\s*[-–]\s*/i,"");
