@@ -2983,6 +2983,7 @@ function updateProgramaDesc(ctrl) {
 }
 function prefillFromPrograma(ctrl) {
   if (selectedPrograma === "NUEVO") return;
+  if (editingId !== null) return; // Al editar, los datos vienen del programa guardado, no del Excel
   var pgs = ctrl.programas || [];
   for (var i = 0; i < pgs.length; i++) {
     var pg = pgs[i];
@@ -3454,13 +3455,116 @@ function cancelEdit() {
   if (warn) { warn.style.display = "none"; warn.textContent = ""; }
   renderPrograms(); // quita el resaltado
 }
+// ── Eliminar programa con confirmación + undo ─────────────────────────────
+var _deleteProgramUndo = null; // { id, program, timer }
+
 function deleteProgram(id) {
+  var prog = null;
+  for (var i = 0; i < PROGRAMS.length; i++) {
+    if (PROGRAMS[i].id === id) { prog = PROGRAMS[i]; break; }
+  }
+  if (!prog) return;
+
+  // Nombre descriptivo para el modal
+  var ctrl = null;
+  for (var ci = 0; ci < CONTROLLERS.length; ci++) {
+    if (CONTROLLERS[ci].n === prog.sectorN) { ctrl = CONTROLLERS[ci]; break; }
+  }
+  var nombre = (ctrl ? "N°" + ctrl.n + " " + ctrl.name : "N°" + prog.sectorN)
+              + " · Pg." + (prog.programa || "?")
+              + " · " + minToHHMM(prog.start);
+
+  // 1. Modal de confirmación
+  var confirmHtml = '<div id="del-prog-overlay" onclick="closeProgramDeleteConfirm()" style="position:fixed;inset:0;background:#0009;z-index:9900;display:flex;align-items:center;justify-content:center">'
+    + '<div onclick="event.stopPropagation()" style="background:var(--panel);border:1px solid #dc262660;border-radius:14px;padding:24px 28px;max-width:360px;width:90%;box-shadow:0 8px 32px #0008">'
+    + '<div style="font-size:1.1rem;font-weight:700;color:#e74c3c;margin-bottom:8px">⚠ Eliminar programa</div>'
+    + '<div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text);background:var(--panel2);padding:8px 12px;border-radius:8px;margin-bottom:16px;line-height:1.6">' + nombre + '</div>'
+    + '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:20px">Esta acción se puede deshacer por 5 segundos después de confirmar.</div>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end">'
+    + '<button onclick="closeProgramDeleteConfirm()" style="padding:7px 18px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:0.8rem;cursor:pointer">Cancelar</button>'
+    + '<button onclick="confirmDeleteProgram(' + id + ')" style="padding:7px 18px;background:#dc2626;border:none;border-radius:8px;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer">Eliminar</button>'
+    + '</div></div></div>';
+
+  var overlay = document.createElement("div");
+  overlay.id = "del-prog-overlay-wrap";
+  overlay.innerHTML = confirmHtml;
+  document.body.appendChild(overlay);
+}
+
+function closeProgramDeleteConfirm() {
+  var el = document.getElementById("del-prog-overlay-wrap");
+  if (el) el.remove();
+}
+
+function confirmDeleteProgram(id) {
+  closeProgramDeleteConfirm();
+
+  // Cancelar undo anterior si había uno pendiente
+  if (_deleteProgramUndo) {
+    clearTimeout(_deleteProgramUndo.timer);
+    // Eliminar definitivamente el anterior
+    PROGRAMS = PROGRAMS.filter(function(p) { return p.id !== _deleteProgramUndo.id; });
+    _deleteProgramUndo = null;
+  }
+
+  // Guardar el programa para posible undo
+  var progBackup = null;
+  for (var i = 0; i < PROGRAMS.length; i++) {
+    if (PROGRAMS[i].id === id) { progBackup = JSON.parse(JSON.stringify(PROGRAMS[i])); break; }
+  }
+  if (!progBackup) return;
+
+  // Ocultar el programa visualmente (sin borrar aún)
   PROGRAMS = PROGRAMS.filter(function(p) { return p.id !== id; });
   renderPrograms();
   updateConflictBadge();
   if (document.getElementById("pane-pmr").classList.contains("active")) buildPMR();
   if (document.getElementById("pane-controladores").classList.contains("active")) buildControllers();
-  saveToStorage();
+
+  // 2. Toast con botón Deshacer
+  var existingToast = document.getElementById("undo-prog-toast");
+  if (existingToast) existingToast.remove();
+
+  var toast = document.createElement("div");
+  toast.id = "undo-prog-toast";
+  toast.innerHTML = '<span style="font-size:0.82rem;color:var(--text)">Programa eliminado</span>'
+    + '<button onclick="undoDeleteProgram()" style="margin-left:14px;padding:4px 14px;background:var(--green);border:none;border-radius:7px;color:#000;font-size:0.78rem;font-weight:700;cursor:pointer">↩ Deshacer</button>'
+    + '<div id="undo-prog-bar" style="position:absolute;bottom:0;left:0;height:3px;background:var(--green);width:100%;border-radius:0 0 10px 10px;transition:width 5s linear"></div>';
+  toast.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 18px;box-shadow:0 4px 20px #0006;z-index:9800;display:flex;align-items:center;gap:4px;min-width:260px;overflow:hidden";
+  document.body.appendChild(toast);
+
+  // Animar barra
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var bar = document.getElementById("undo-prog-bar");
+      if (bar) bar.style.width = "0%";
+    });
+  });
+
+  // Timer para eliminar definitivamente
+  var timer = setTimeout(function() {
+    _deleteProgramUndo = null;
+    saveToStorage();
+    var t = document.getElementById("undo-prog-toast");
+    if (t) t.remove();
+  }, 5000);
+
+  _deleteProgramUndo = { id: id, program: progBackup, timer: timer };
+}
+
+function undoDeleteProgram() {
+  if (!_deleteProgramUndo) return;
+  clearTimeout(_deleteProgramUndo.timer);
+  // Restaurar programa
+  PROGRAMS.push(_deleteProgramUndo.program);
+  PROGRAMS.sort(function(a, b) { return a.id - b.id; });
+  _deleteProgramUndo = null;
+  var t = document.getElementById("undo-prog-toast");
+  if (t) t.remove();
+  renderPrograms();
+  updateConflictBadge();
+  if (document.getElementById("pane-pmr").classList.contains("active")) buildPMR();
+  if (document.getElementById("pane-controladores").classList.contains("active")) buildControllers();
 }
 function updateConflictBadge() {
   var total = 0;
