@@ -4990,6 +4990,7 @@ function doLogin() {
     setTimeout(function() {
       buildWifi();
       updateConflictBadge();
+      buildCheckin();
     }, 300);
     setTimeout(function() {
       climaAutoFetch();
@@ -6732,7 +6733,7 @@ function printCheckin() {
       + '<td style="text-align:center;font-weight:900;font-size:8pt;color:#fff;' + BRD + 'padding:4px 2px;border-color:#2d6a0a" rowspan="' + rowspan + '">' + c.n + '</td>'
       + '<td colspan="2" style="font-weight:800;font-size:7.5pt;color:#fff;' + BRD + 'padding:4px 6px;border-color:#2d6a0a">' + c.name
         + (bomba !== '—' ? ' <span style="font-size:5.5pt;font-weight:400;opacity:.85">· ' + bomba + '</span>' : '') + '</td>'
-      + '<td colspan="7" style="' + BRD + 'border-color:#2d6a0a;padding:2px 4px">' + OBS_LINE + '</td>'
+      + '<td colspan="8" style="' + BRD + 'border-color:#2d6a0a;padding:2px 4px">' + OBS_LINE + '</td>'
       + '</tr>';
 
     if (nProgs === 0) {
@@ -6820,8 +6821,10 @@ function printCheckin() {
     + '.ins{margin-top:2px;font-size:4.5pt;color:#555;background:#fffbe5;border:1px solid #e8d040;border-radius:2px;padding:1px 5px;line-height:1.4}'
     + '.ft{margin-top:2px;display:flex;justify-content:space-between;font-size:4.2pt;color:#aaa;border-top:1px solid #ddd;padding-top:1px}';
 
-  var w = window.open("","_blank","width=900,height=700");
+  var winName = "pmree_checkin_" + Date.now();
+  var w = window.open("", winName, "width=900,height=700");
   if (!w) { alert("Permite ventanas emergentes para imprimir."); return; }
+  w.document.open();  // limpia contenido anterior si la ventana fue reutilizada
   w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
     + '<title>Check-in Controladores · PMR EE</title>'
     + '<style>' + css + '</style></head><body>');
