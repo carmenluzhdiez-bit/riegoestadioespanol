@@ -772,7 +772,7 @@
   <button class="tab" data-tab="reportes" onclick="showTab('reportes')">📊 Reportes</button>
   <button class="tab" data-tab="clima" onclick="showTab('clima')">🌡️ Clima</button>
   <button class="tab only-admin" data-tab="config" onclick="showTab('config')">⚙️ Config.</button>
-  <button class="tab" data-tab="checkin" onclick="showTab('checkin');buildCheckin()">✅ Check-in</button>
+  <button class="tab" data-tab="checkin" onclick="showTab('checkin')">✅ Check-in</button>
 </div>
 <main>
 <div id="clima-alert-banner" style="display:none;margin:0 0 10px 0;border-radius:10px;padding:10px 16px;font-family:var(--font-mono);font-size:0.78rem;font-weight:700;cursor:pointer" onclick="showTab('clima')"></div>
@@ -1377,21 +1377,10 @@
     </div>
   </div>
 
-  <!-- div vacío requerido por resetCheckin() -->
+  <!-- inputs ocultos requeridos por funciones JS existentes -->
   <div id="ci-tabla" style="display:none"></div>
-  <!-- inputs ocultos requeridos por lógica existente -->
   <input type="hidden" id="ci-fecha">
   <input type="hidden" id="ci-hora">
-
-  <!-- Nota bombas -->
-  <div style="margin-top:10px;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:10px 14px">
-    <div style="font-family:var(--font-mono);font-size:0.68rem;font-weight:700;color:var(--amber);margin-bottom:5px">⚠ Controladores que comparten bomba — no operar simultáneamente</div>
-    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px">
-      <span><span style="color:var(--green)">Bomba A:</span> N°4 Alameda · N°5 Piscina</span>
-      <span><span style="color:var(--green)">Bomba B:</span> N°7 Torre 02 Aspersión · N°8 Torre 02 Goteros</span>
-      <span><span style="color:var(--green)">Bomba C:</span> N°9 Golf Greenes · N°10 Golf Cancha · N°11 Jardín Infantil Golf</span>
-    </div>
-  </div>
 
 </div>
 
@@ -4993,7 +4982,6 @@ function doLogin() {
     setTimeout(function() {
       buildWifi();
       updateConflictBadge();
-      buildCheckin();
     }, 300);
     setTimeout(function() {
       climaAutoFetch();
