@@ -6592,62 +6592,84 @@ function buildCheckin() {
 
   var ctrls = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
 
+  // Cabecera igual a la planilla imprimible
   var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.72rem">';
-  html += '<thead><tr style="background:var(--panel2);border-bottom:2px solid var(--green)">'
-    + '<th style="padding:6px 4px;text-align:center;width:24px;color:var(--muted)">N°</th>'
-    + '<th style="padding:6px 4px;text-align:center;width:28px;color:var(--muted)">Pg</th>'
-    + '<th style="padding:6px 8px;text-align:left;color:var(--muted)">Notas programa</th>'
-    + '<th style="padding:6px 4px;text-align:center;width:70px;color:var(--muted)">Días</th>'
-    + '<th style="padding:6px 4px;text-align:center;width:56px;color:var(--muted)">Hora inicio</th>'
-    + '<th style="padding:6px 4px;text-align:center;width:46px;color:var(--muted)">T° (min)</th>'
-    + '<th style="padding:6px 4px;text-align:center;width:36px;color:var(--muted)">✓ OK</th>'
-    + '<th style="padding:6px 8px;text-align:left;color:var(--muted)">Observación</th>'
+  html += '<thead><tr style="background:#2d6a0a;color:#fff">'
+    + '<th style="padding:5px 3px;text-align:center;width:28px;border:1px solid #1e4d06;font-size:0.65rem">N°</th>'
+    + '<th style="padding:5px 3px;text-align:center;width:32px;border:1px solid #1e4d06;font-size:0.65rem">Pg</th>'
+    + '<th style="padding:5px 6px;text-align:left;border:1px solid #1e4d06;font-size:0.65rem">Notas / Zona</th>'
+    + '<th style="padding:5px 3px;text-align:center;width:64px;border:1px solid #1e4d06;font-size:0.65rem">Días</th>'
+    + '<th style="padding:5px 3px;text-align:center;width:54px;border:1px solid #1e4d06;font-size:0.65rem">Hora</th>'
+    + '<th style="padding:5px 3px;text-align:center;width:44px;border:1px solid #1e4d06;font-size:0.65rem">T°(min)</th>'
+    + '<th style="padding:5px 3px;text-align:center;width:38px;border:1px solid #1e4d06;font-size:0.65rem">OK ✓</th>'
+    + '<th style="padding:5px 6px;text-align:left;border:1px solid #1e4d06;font-size:0.65rem">Observación</th>'
     + '</tr></thead><tbody>';
 
   for (var i = 0; i < ctrls.length; i++) {
     var c = ctrls[i];
     var n = c.n;
-    // Programas reales de PROGRAMS para este controlador
+    var bombaCI = CI_BOMBAS[n] || '';
     var progs = PROGRAMS.filter(function(p){ return p.sectorN === n; });
     progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
 
-    // Fila encabezado controlador
-    html += '<tr style="background:var(--panel2);border-top:2px solid var(--green)">'
-      + '<td style="padding:4px 4px;text-align:center;font-weight:900;color:var(--green);font-size:0.8rem" rowspan="' + (progs.length||1) + '">' + n + '</td>';
+    // Calcular rowspan total del controlador (1 por programa + 1 por zona)
+    var ciRs = progs.length || 1;
+    if (progs.length > 0) {
+      ciRs = 0;
+      for (var ri = 0; ri < progs.length; ri++) {
+        ciRs += 1 + ((progs[ri].zonasConMin || []).length);
+      }
+    }
+
+    // Fila verde encabezado controlador
+    html += '<tr style="background:#4a8c1c">'
+      + '<td rowspan="' + ciRs + '" style="text-align:center;font-weight:900;font-size:0.82rem;color:#fff;border:1px solid #2d6a0a;padding:4px 2px;vertical-align:top;padding-top:6px">' + n + '</td>'
+      + '<td colspan="6" style="font-weight:800;font-size:0.78rem;color:#fff;border:1px solid #2d6a0a;padding:4px 8px">' + c.name
+        + (bombaCI ? ' <span style="font-size:0.6rem;font-weight:400;opacity:0.85">· ' + bombaCI + '</span>' : '') + '</td>'
+      + '<td style="border:1px solid #2d6a0a;padding:2px 6px"><input type="text" placeholder="Obs. controlador" style="width:100%;padding:2px 4px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);border-radius:4px;color:#fff;font-family:var(--font-mono);font-size:0.65rem" placeholder="obs. general"></td>'
+      + '</tr>';
 
     if (progs.length === 0) {
-      html += '<td colspan="7" style="padding:4px 8px;color:var(--muted);font-style:italic">' + c.name + ' — sin programas registrados</td></tr>';
+      html += '<tr><td colspan="7" style="padding:4px 8px;color:var(--muted);font-style:italic;border:1px solid var(--border)">sin programas registrados</td></tr>';
       continue;
     }
 
-    // Primera fila = primer programa + nombre controlador en notas
-    var p0 = progs[0];
-    var st0 = ciState[n+"_"+p0.id] || {};
-    var okBg0 = st0.ok ? "background:var(--green);color:#000" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
-    html += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:var(--amber);font-size:0.7rem">' + p0.programa + '</td>'
-      + '<td style="padding:3px 8px;color:var(--text)"><span style="font-weight:700;color:var(--text-dim)">' + c.name + '</span> <span style="color:var(--muted);font-size:0.66rem">— ' + (p0.notes||'') + '</span></td>'
-      + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p0) + '</td>'
-      + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + ciMinToHora(p0.start) + '</td>'
-      + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + (p0.dur||'—') + '</td>'
-      + '<td style="padding:3px 4px;text-align:center"><button onclick="ciToggleOk(\''+n+'_'+p0.id+'\')" style="width:28px;height:24px;border-radius:6px;border:none;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBg0+'">'+(st0.ok?'✓':'○')+'</button></td>'
-      + '<td style="padding:3px 6px"><input type="text" placeholder="sin novedad" value="'+(st0.obs||'')+'" oninput="ciSet(\''+n+'_'+p0.id+'\',\'obs\',this.value)" style="width:100%;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>'
-      + '</tr>';
-
-    // Filas siguientes programas
-    for (var j = 1; j < progs.length; j++) {
+    // Filas de programas con subfilas de zonas
+    for (var j = 0; j < progs.length; j++) {
       var p = progs[j];
+      var bgRow = j % 2 === 0 ? "background:#fff" : "background:#f4fbed";
       var stj = ciState[n+"_"+p.id] || {};
-      var bg = j % 2 === 0 ? "background:var(--panel)" : "background:var(--bg)";
-      var okBgJ = stj.ok ? "background:var(--green);color:#000" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
-      html += '<tr style="'+bg+';border-bottom:1px solid var(--border)">'
-        + '<td style="padding:3px 4px;text-align:center;font-weight:700;color:var(--amber);font-size:0.7rem">' + p.programa + '</td>'
-        + '<td style="padding:3px 8px;color:var(--muted);font-size:0.68rem">' + (p.notes||'') + '</td>'
-        + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p) + '</td>'
-        + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + ciMinToHora(p.start) + '</td>'
-        + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + (p.dur||'—') + '</td>'
-        + '<td style="padding:3px 4px;text-align:center"><button onclick="ciToggleOk(\''+n+'_'+p.id+'\')" style="width:28px;height:24px;border-radius:6px;border:none;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBgJ+'">'+(stj.ok?'✓':'○')+'</button></td>'
-        + '<td style="padding:3px 6px"><input type="text" placeholder="sin novedad" value="'+(stj.obs||'')+'" oninput="ciSet(\''+n+'_'+p.id+'\',\'obs\',this.value)" style="width:100%;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>'
+      var okBgJ = stj.ok ? "background:var(--green);color:#000;border:none" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
+      var notCI = (p.notes||'').replace(/^PG[A-Z]\s*[-–]\s*/i,'');
+      var zonasCi = p.zonasConMin || [];
+      var nzCI = zonasCi.length;
+      var pgRsCI = 1 + nzCI;
+
+      html += '<tr style="' + bgRow + ';border-bottom:' + (nzCI ? 'none' : '1px solid var(--border)') + '">'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 3px;text-align:center;font-weight:700;color:#2d6a0a;font-size:0.72rem;border:1px solid var(--border);vertical-align:top;padding-top:4px">' + p.programa + '</td>'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 6px;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);vertical-align:top">' + notCI + '</td>'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;font-size:0.66rem;color:var(--muted);border:1px solid var(--border);vertical-align:middle">' + ciDaysStr(p) + '</td>'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;border:1px solid var(--border);vertical-align:middle">' + ciMinToHora(p.start) + '</td>'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;border:1px solid var(--border);vertical-align:middle">' + (p.dur||'—') + '</td>'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;border:1px solid var(--border);vertical-align:middle">'
+          + '<button onclick="ciToggleOk(\''+n+'_'+p.id+'\')" style="width:30px;height:26px;border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBgJ+'">'+(stj.ok?'✓':'○')+'</button></td>'
+        + '<td rowspan="' + pgRsCI + '" style="padding:3px 6px;border:1px solid var(--border);vertical-align:top">'
+          + '<input type="text" placeholder="sin novedad" value="'+(stj.obs||'')+'" oninput="ciSet(\''+n+'_'+p.id+'\',\'obs\',this.value)" style="width:100%;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.67rem"></td>'
         + '</tr>';
+
+      // Subfilas zonas
+      for (var zi = 0; zi < nzCI; zi++) {
+        var zz = zonasCi[zi];
+        var zIdCI = "Z" + normZonaId(zz.id);
+        var zNomCI = (zz.label || "").replace(/^Z[^\s]+\s*/, "");
+        var isLastZ = zi === nzCI - 1;
+        html += '<tr style="' + bgRow + ';border-bottom:' + (isLastZ ? '1px solid var(--border)' : '1px dashed var(--border)') + '">'
+          + '<td colspan="7" style="padding:1px 6px 1px 14px;font-size:0.6rem;color:var(--muted);border:1px solid var(--border)">'
+          + '<span style="color:var(--green);font-weight:700">' + zIdCI + '</span>'
+          + (zNomCI ? ' <span>' + zNomCI + '</span>' : '')
+          + (zz.min ? ' <span style="color:var(--muted);margin-left:6px">· ' + zz.min + ' min</span>' : '')
+          + '</td></tr>';
+      }
     }
   }
   html += '</tbody></table></div>';
@@ -6685,7 +6707,7 @@ function printCheckin() {
   var OBS_LINE = '<div style="border-bottom:1px solid #bbb;height:8px;margin:2px 2px"></div>';
   var CIRC = '<div style="width:9px;height:9px;border:1.4px solid #2d6a0a;border-radius:50%;margin:auto"></div>';
   var BRD = "border:1px solid #c8e6b0;";
-  var TD  = "padding:1px 3px;" + BRD;
+  var TD  = "padding:0.5px 2px;" + BRD;
 
   // thead repetido en cada página via CSS
   var filas = "";
@@ -6753,7 +6775,7 @@ function printCheckin() {
         var zId  = "Z" + normZonaId(zz.id);
         var isLast = zi === nZonas - 1;
         filas += '<tr style="background:' + bgPg + ';border-bottom:' + (isLast ? '1px solid #d4ecc0' : '1px solid #e8f5de') + '">'
-          + '<td colspan="10" style="padding:1px 6px 1px 10px;font-size:5.2pt;color:#555;border:1px solid #d4ecc0">'
+          + '<td colspan="10" style="padding:0.5px 4px 0.5px 10px;font-size:4.8pt;color:#555;border:1px solid #d4ecc0">'
           + '<span style="color:#2d6a0a;font-weight:700;font-family:monospace">' + zId + '</span>'
           + (zNom ? ' <span style="color:#333">' + zNom + '</span>' : '')
           + (zz.min ? ' <span style="color:#888;margin-left:4px">· ' + zz.min + '\' </span>' : '')
@@ -6778,25 +6800,25 @@ function printCheckin() {
     + '<th style="text-align:left;padding:3px 4px;border:1px solid #1e4d06;font-size:5.5pt">Observación</th>'
     + '</tr></thead>';
 
-  var css = '@page{size:A4 portrait;margin:8mm 10mm 7mm 10mm}'
+  var css = '@page{size:A4 portrait;margin:6mm 8mm 5mm 8mm}'
     + '*{box-sizing:border-box;margin:0;padding:0}'
-    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:6.5pt;color:#111;background:#fff}'
-    + '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #4a8c1c;padding-bottom:4px;margin-bottom:4px}'
-    + '.marca{font-size:11pt;font-weight:900;color:#2d6a0a;line-height:1.2}'
+    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:5.8pt;color:#111;background:#fff}'
+    + '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #4a8c1c;padding-bottom:2px;margin-bottom:2px}'
+    + '.marca{font-size:9pt;font-weight:900;color:#2d6a0a;line-height:1.2}'
     + '.tt{text-align:right}'
-    + '.tt b{font-size:9.5pt;font-weight:900;color:#2d6a0a;display:block}'
-    + '.tt span{font-size:5.5pt;color:#666}'
-    + '.meta{display:flex;gap:4px;margin-bottom:4px}'
-    + '.mb{border:1.5px solid #4a8c1c;border-radius:3px;padding:2px 6px;flex:1}'
-    + '.mb .l{font-size:4.5pt;color:#888;text-transform:uppercase;letter-spacing:.3px}'
-    + '.mb .v{font-size:7.5pt;font-weight:700;color:#2d6a0a;min-height:11px}'
+    + '.tt b{font-size:8pt;font-weight:900;color:#2d6a0a;display:block}'
+    + '.tt span{font-size:4.8pt;color:#666}'
+    + '.meta{display:flex;gap:3px;margin-bottom:2px}'
+    + '.mb{border:1px solid #4a8c1c;border-radius:2px;padding:1px 5px;flex:1}'
+    + '.mb .l{font-size:4pt;color:#888;text-transform:uppercase;letter-spacing:.3px}'
+    + '.mb .v{font-size:6.5pt;font-weight:700;color:#2d6a0a;min-height:9px}'
     + 'table{width:100%;border-collapse:collapse;table-layout:fixed}'
-    + 'thead{display:table-header-group}'  /* repite en cada página */
+    + 'thead{display:table-header-group}'
     + 'tr{page-break-inside:avoid}'
-    + '.bn{margin-top:5px;border:1px solid #c8e6b0;border-radius:3px;padding:3px 6px;background:#f4fbed;font-size:5.2pt;line-height:1.7}'
-    + '.bn b{color:#2d6a0a;font-size:5.5pt;display:block;margin-bottom:1px}'
-    + '.ins{margin-top:3px;font-size:5pt;color:#555;background:#fffbe5;border:1px solid #e8d040;border-radius:3px;padding:2px 6px;line-height:1.5}'
-    + '.ft{margin-top:3px;display:flex;justify-content:space-between;font-size:4.8pt;color:#aaa;border-top:1px solid #ddd;padding-top:2px}';
+    + '.bn{margin-top:3px;border:1px solid #c8e6b0;border-radius:2px;padding:2px 5px;background:#f4fbed;font-size:4.8pt;line-height:1.6}'
+    + '.bn b{color:#2d6a0a;font-size:5pt;display:block;margin-bottom:0}'
+    + '.ins{margin-top:2px;font-size:4.5pt;color:#555;background:#fffbe5;border:1px solid #e8d040;border-radius:2px;padding:1px 5px;line-height:1.4}'
+    + '.ft{margin-top:2px;display:flex;justify-content:space-between;font-size:4.2pt;color:#aaa;border-top:1px solid #ddd;padding-top:1px}';
 
   var w = window.open("","_blank","width=900,height=700");
   if (!w) { alert("Permite ventanas emergentes para imprimir."); return; }
