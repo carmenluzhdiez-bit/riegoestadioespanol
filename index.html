@@ -6863,9 +6863,9 @@ function printCheckin() {
     + '<span>PMR EE · planilla plastificada · limpiar con paño húmedo</span>'
     + '</div>');
 
+  w.document.write('<script>window.onload=function(){window.print();}<\/script>');
   w.document.write('</body></html>');
   w.document.close();
-  w.onload = function(){ w.print(); };
 }
 </script>
 </body>
