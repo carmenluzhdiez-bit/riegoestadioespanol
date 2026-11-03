@@ -6582,7 +6582,6 @@ function ciDaysStr(p) {
 }
 
 function buildCheckin() {
-  // Inicializar campos si vacíos
   var fechaEl = document.getElementById("ci-fecha");
   var horaEl  = document.getElementById("ci-hora");
   var semEl   = document.getElementById("ci-semana");
@@ -6592,19 +6591,33 @@ function buildCheckin() {
   if (semEl   && !semEl.value)   semEl.value   = now.toISOString().slice(0,10);
 
   var ctrls = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
+  var BDR = "border:1px solid var(--border);";
+  var TH  = "padding:5px 4px;text-align:center;" + BDR + "font-size:0.63rem;background:#2d6a0a;color:#fff;";
+  var TD  = "padding:3px 4px;" + BDR + "font-size:0.68rem;vertical-align:middle;";
 
-  // Cabecera igual a la planilla imprimible
-  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.72rem">';
-  html += '<thead><tr style="background:#2d6a0a;color:#fff">'
-    + '<th style="padding:5px 3px;text-align:center;width:28px;border:1px solid #1e4d06;font-size:0.65rem">N°</th>'
-    + '<th style="padding:5px 3px;text-align:center;width:32px;border:1px solid #1e4d06;font-size:0.65rem">Pg</th>'
-    + '<th style="padding:5px 6px;text-align:left;border:1px solid #1e4d06;font-size:0.65rem">Notas / Zona</th>'
-    + '<th style="padding:5px 3px;text-align:center;width:64px;border:1px solid #1e4d06;font-size:0.65rem">Días</th>'
-    + '<th style="padding:5px 3px;text-align:center;width:54px;border:1px solid #1e4d06;font-size:0.65rem">Hora</th>'
-    + '<th style="padding:5px 3px;text-align:center;width:44px;border:1px solid #1e4d06;font-size:0.65rem">T°(min)</th>'
-    + '<th style="padding:5px 3px;text-align:center;width:38px;border:1px solid #1e4d06;font-size:0.65rem">OK ✓</th>'
-    + '<th style="padding:5px 6px;text-align:left;border:1px solid #1e4d06;font-size:0.65rem">Observación</th>'
+  // TABLA PLANA — una fila por zona, cero rowspan
+  // Columnas: N° | Controlador | Pg | Zona | Días/Frec | Hora inicio | Dur(min) | Próx.riego | ✓Días | ✓Hora | ✓Dur | Obs
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.68rem">';
+  html += '<thead><tr>'
+    + '<th style="' + TH + 'width:26px">N°</th>'
+    + '<th style="' + TH + 'text-align:left;min-width:90px">Controlador</th>'
+    + '<th style="' + TH + 'width:24px">Pg</th>'
+    + '<th style="' + TH + 'text-align:left;min-width:120px">Zona</th>'
+    + '<th style="' + TH + 'width:60px">Días/Frec</th>'
+    + '<th style="' + TH + 'width:48px">Hora</th>'
+    + '<th style="' + TH + 'width:40px">Dur\'</th>'
+    + '<th style="' + TH + 'width:70px">✓/✗<br><span style="font-weight:400;font-size:0.55rem">vs RainBird</span></th>'
+    + '<th style="' + TH + 'width:30px">✓<br>Días</th>'
+    + '<th style="' + TH + 'width:30px">✓<br>Hora</th>'
+    + '<th style="' + TH + 'width:30px">✓<br>Dur</th>'
+    + '<th style="' + TH + 'text-align:left">Observación</th>'
     + '</tr></thead><tbody>';
+
+  var CIRC_BTN = function(key, stateObj) {
+    var ok = stateObj && stateObj.ok;
+    var bg = ok ? "background:var(--green);color:#000;border:none" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
+    return '<button onclick="ciToggleOk(\'' + key + '\')" style="width:26px;height:22px;border-radius:5px;cursor:pointer;font-size:0.65rem;font-weight:700;' + bg + '">' + (ok ? '✓' : '○') + '</button>';
+  };
 
   for (var i = 0; i < ctrls.length; i++) {
     var c = ctrls[i];
@@ -6613,63 +6626,71 @@ function buildCheckin() {
     var progs = PROGRAMS.filter(function(p){ return p.sectorN === n; });
     progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
 
-    // Calcular rowspan total del controlador (1 por programa + 1 por zona)
-    var ciRs = progs.length || 1;
-    if (progs.length > 0) {
-      ciRs = 0;
-      for (var ri = 0; ri < progs.length; ri++) {
-        ciRs += 1 + ((progs[ri].zonasConMin || []).length);
-      }
-    }
-
-    // Fila verde encabezado controlador
+    // Fila separadora verde por controlador
+    var ctrlLabel = n + ' · ' + c.name + (bombaCI ? ' <span style="font-weight:400;font-size:0.6rem;opacity:0.85">· ' + bombaCI + '</span>' : '');
     html += '<tr style="background:#4a8c1c">'
-      + '<td rowspan="' + ciRs + '" style="text-align:center;font-weight:900;font-size:0.82rem;color:#fff;border:1px solid #2d6a0a;padding:4px 2px;vertical-align:top;padding-top:6px">' + n + '</td>'
-      + '<td colspan="6" style="font-weight:800;font-size:0.78rem;color:#fff;border:1px solid #2d6a0a;padding:4px 8px">' + c.name
-        + (bombaCI ? ' <span style="font-size:0.6rem;font-weight:400;opacity:0.85">· ' + bombaCI + '</span>' : '') + '</td>'
-      + '<td style="border:1px solid #2d6a0a;padding:2px 6px"><input type="text" placeholder="Obs. controlador" style="width:100%;padding:2px 4px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);border-radius:4px;color:#fff;font-family:var(--font-mono);font-size:0.65rem" placeholder="obs. general"></td>'
+      + '<td colspan="12" style="padding:3px 10px;font-weight:800;font-size:0.76rem;color:#fff;border:1px solid #2d6a0a">' + ctrlLabel + '</td>'
       + '</tr>';
 
     if (progs.length === 0) {
-      html += '<tr><td colspan="7" style="padding:4px 8px;color:var(--muted);font-style:italic;border:1px solid var(--border)">sin programas registrados</td></tr>';
+      html += '<tr><td colspan="12" style="' + TD + 'color:var(--muted);font-style:italic">sin programas registrados</td></tr>';
       continue;
     }
 
-    // Filas de programas con subfilas de zonas
+    // Una fila por zona de cada programa
     for (var j = 0; j < progs.length; j++) {
       var p = progs[j];
-      var bgRow = j % 2 === 0 ? "background:#fff" : "background:#f4fbed";
-      var stj = ciState[n+"_"+p.id] || {};
-      var okBgJ = stj.ok ? "background:var(--green);color:#000;border:none" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
-      var notCI = (p.notes||'').replace(/^PG[A-Z]\s*[-–]\s*/i,'');
-      var zonasCi = p.zonasConMin || [];
-      var nzCI = zonasCi.length;
-      var pgRsCI = 1 + nzCI;
+      var diasStr = ciDaysStr(p);
+      var horaStr = ciMinToHora(p.start !== undefined ? p.start : 0);
+      var durStr  = p.dur ? p.dur + "'" : "—";
+      var zonas   = p.zonasConMin || [];
 
-      html += '<tr style="' + bgRow + ';border-bottom:' + (nzCI ? 'none' : '1px solid var(--border)') + '">'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 3px;text-align:center;font-weight:700;color:#2d6a0a;font-size:0.72rem;border:1px solid var(--border);vertical-align:top;padding-top:4px">' + p.programa + '</td>'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 6px;font-size:0.68rem;color:var(--text-dim);border:1px solid var(--border);vertical-align:top">' + notCI + '</td>'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;font-size:0.66rem;color:var(--muted);border:1px solid var(--border);vertical-align:middle">' + ciDaysStr(p) + '</td>'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;border:1px solid var(--border);vertical-align:middle">' + ciMinToHora(p.start) + '</td>'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;border:1px solid var(--border);vertical-align:middle">' + (p.dur||'—') + '</td>'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 4px;text-align:center;border:1px solid var(--border);vertical-align:middle">'
-          + '<button onclick="ciToggleOk(\''+n+'_'+p.id+'\')" style="width:30px;height:26px;border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBgJ+'">'+(stj.ok?'✓':'○')+'</button></td>'
-        + '<td rowspan="' + pgRsCI + '" style="padding:3px 6px;border:1px solid var(--border);vertical-align:top">'
-          + '<input type="text" placeholder="sin novedad" value="'+(stj.obs||'')+'" oninput="ciSet(\''+n+'_'+p.id+'\',\'obs\',this.value)" style="width:100%;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.67rem"></td>'
-        + '</tr>';
+      if (zonas.length === 0) {
+        // Programa sin zonas — una sola fila
+        var key0 = n + "_" + p.id + "_prog";
+        var st0  = ciState[key0] || {};
+        var bg0  = j % 2 === 0 ? "#fff" : "#f4fbed";
+        html += '<tr style="background:' + bg0 + ';border-bottom:1px solid var(--border)">'
+          + '<td style="' + TD + 'text-align:center;color:#2d6a0a;font-size:0.6rem">' + n + '</td>'
+          + '<td style="' + TD + 'color:var(--muted);font-size:0.62rem">' + c.name + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-weight:700;color:#2d6a0a">' + p.programa + '</td>'
+          + '<td style="' + TD + 'color:var(--text-dim);font-size:0.65rem">' + (p.notes||'').replace(/^PG[A-Z]\s*[-–]\s*/i,'') + '</td>'
+          + '<td style="' + TD + 'text-align:center;color:var(--muted)">' + diasStr + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + horaStr + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + durStr + '</td>'
+          + '<td style="' + TD + '"></td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC_BTN(key0+"_dias", st0.dias ? {ok:true} : {}) + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC_BTN(key0+"_hora", st0.hora ? {ok:true} : {}) + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC_BTN(key0+"_dur",  st0.dur  ? {ok:true} : {}) + '</td>'
+          + '<td style="' + TD + '"><input type="text" placeholder="sin novedad" value="' + (st0.obs||'') + '" oninput="ciSet(\'' + key0 + '\',\'obs\',this.value)" style="width:100%;padding:2px 5px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>'
+          + '</tr>';
+        continue;
+      }
 
-      // Subfilas zonas
-      for (var zi = 0; zi < nzCI; zi++) {
-        var zz = zonasCi[zi];
-        var zIdCI = "Z" + normZonaId(zz.id);
-        var zNomCI = (zz.label || "").replace(/^Z[^\s]+\s*/, "");
-        var isLastZ = zi === nzCI - 1;
-        html += '<tr style="' + bgRow + ';border-bottom:' + (isLastZ ? '1px solid var(--border)' : '1px dashed var(--border)') + '">'
-          + '<td colspan="7" style="padding:1px 6px 1px 14px;font-size:0.6rem;color:var(--muted);border:1px solid var(--border)">'
-          + '<span style="color:var(--green);font-weight:700">' + zIdCI + '</span>'
-          + (zNomCI ? ' <span>' + zNomCI + '</span>' : '')
-          + (zz.min ? ' <span style="color:var(--muted);margin-left:6px">· ' + zz.min + ' min</span>' : '')
-          + '</td></tr>';
+      // Una fila por zona
+      for (var zi = 0; zi < zonas.length; zi++) {
+        var zz   = zonas[zi];
+        var zId  = "Z" + normZonaId(zz.id);
+        var zNom = (zz.label || zId).replace(/^Z[^\s]+\s*/, "");
+        var zMin = zz.min ? zz.min + "'" : "—";
+        var key  = n + "_" + p.id + "_z" + normZonaId(zz.id);
+        var st   = ciState[key] || {};
+        var bgZ  = zi % 2 === 0 ? (j%2===0?"#fff":"#f4fbed") : (j%2===0?"#f9fdf5":"#edf7e4");
+        var isLast = zi === zonas.length - 1;
+        html += '<tr style="background:' + bgZ + ';border-bottom:' + (isLast ? '2px solid #c8e6b0' : '1px solid #e8f5de') + '">'
+          + '<td style="' + TD + 'text-align:center;color:#2d6a0a;font-size:0.6rem">' + n + '</td>'
+          + '<td style="' + TD + 'color:var(--muted);font-size:0.62rem">' + (zi===0 ? c.name : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-weight:700;color:#2d6a0a">' + (zi===0 ? p.programa : '') + '</td>'
+          + '<td style="' + TD + '"><span style="color:var(--green);font-weight:700;margin-right:4px">' + zId + '</span><span style="color:var(--text)">' + zNom + '</span></td>'
+          + '<td style="' + TD + 'text-align:center;color:var(--muted)">' + (zi===0 ? diasStr : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + (zi===0 ? horaStr : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center;color:var(--green);font-weight:700">' + zMin + '</td>'
+          + '<td style="' + TD + '"></td>'
+          + '<td style="' + TD + 'text-align:center">' + (zi===0 ? CIRC_BTN(key+"_dias", st.dias?{ok:true}:{}) : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + (zi===0 ? CIRC_BTN(key+"_hora", st.hora?{ok:true}:{}) : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC_BTN(key+"_dur", st.dur?{ok:true}:{}) + '</td>'
+          + '<td style="' + TD + '"><input type="text" placeholder="sin novedad" value="' + (st.obs||'') + '" oninput="ciSet(\'' + key + '\',\'obs\',this.value)" style="width:100%;padding:2px 5px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:0.65rem"></td>'
+          + '</tr>';
       }
     }
   }
@@ -6705,100 +6726,98 @@ function printCheckin() {
   }
 
   var ctrls = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
-  var OBS_LINE = '<div style="border-bottom:1px solid #bbb;height:8px;margin:2px 2px"></div>';
-  var CIRC = '<div style="width:9px;height:9px;border:1.4px solid #2d6a0a;border-radius:50%;margin:auto"></div>';
-  var BRD = "border:1px solid #c8e6b0;";
-  var TD  = "padding:0.5px 2px;" + BRD;
+  var CIRC = '<div style="width:8px;height:8px;border:1.2px solid #2d6a0a;border-radius:50%;margin:auto"></div>';
+  var BRD  = "border:1px solid #c8e6b0;";
+  var TD   = "padding:0.5px 2px;" + BRD + "font-size:5.5pt;vertical-align:middle;";
+  var OBS  = '<div style="border-bottom:1px solid #bbb;height:7px;margin:1px 2px"></div>';
 
-  // thead repetido en cada página via CSS
+  // TABLA PLANA — una fila por zona, cero rowspan
+  // Cols: N° | Ctrl | Pg | Zona | Días | Hora | Dur' | ✓Días | ✓Hora | ✓Dur | Obs
   var filas = "";
 
   for (var i = 0; i < ctrls.length; i++) {
     var c = ctrls[i];
-    var bomba = CI_BOMBAS[c.n] || '—';
+    var bomba = CI_BOMBAS[c.n] || '';
     var progs = PROGRAMS.filter(function(p){ return p.sectorN === c.n; });
     progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
-    var nProgs = progs.length;
-    // rowspan del controlador = 1 fila por programa + 1 subfila por cada zona
-    var rowspan = nProgs || 1;
-    if (nProgs > 0) {
-      rowspan = 0;
-      for (var ri = 0; ri < nProgs; ri++) {
-        rowspan += 1 + ((progs[ri].zonasConMin || []).length);
-      }
-    }
 
-    // Fila verde encabezado controlador — colspan total = 10 cols (sin N° que tiene rowspan)
+    // Fila separadora verde — sin rowspan
     filas += '<tr style="background:#4a8c1c;page-break-inside:avoid">'
-      + '<td style="text-align:center;font-weight:900;font-size:8pt;color:#fff;' + BRD + 'padding:4px 2px;border-color:#2d6a0a" rowspan="' + rowspan + '">' + c.n + '</td>'
-      + '<td colspan="2" style="font-weight:800;font-size:7.5pt;color:#fff;' + BRD + 'padding:4px 6px;border-color:#2d6a0a">' + c.name
-        + (bomba !== '—' ? ' <span style="font-size:5.5pt;font-weight:400;opacity:.85">· ' + bomba + '</span>' : '') + '</td>'
-      + '<td colspan="8" style="' + BRD + 'border-color:#2d6a0a;padding:2px 4px">' + OBS_LINE + '</td>'
-      + '</tr>';
+      + '<td colspan="11" style="padding:2px 6px;font-weight:800;font-size:6pt;color:#fff;border:1px solid #2d6a0a">'
+      + c.n + ' · ' + c.name
+      + (bomba ? ' <span style="font-weight:400;font-size:5pt;opacity:.85">· ' + bomba + '</span>' : '')
+      + '</td></tr>';
 
-    if (nProgs === 0) {
-      filas += '<tr><td colspan="9" style="' + TD + 'font-style:italic;font-size:5.5pt;color:#aaa">sin programas registrados</td></tr>';
+    if (progs.length === 0) {
+      filas += '<tr><td colspan="11" style="' + TD + 'font-style:italic;color:#aaa">sin programas</td></tr>';
       continue;
     }
 
-    for (var j = 0; j < nProgs; j++) {
+    for (var j = 0; j < progs.length; j++) {
       var pg = progs[j];
-      var bgPg = j % 2 === 0 ? "#fff" : "#f4fbed";
-      var diasStr = buildDaysLabel(pg);
-      var inicioStr = ciMinToHora(pg.start !== undefined ? pg.start : 0);
-      var durStr = pg.dur ? pg.dur + "'" : "—";
-      var notesStr = (pg.notes || "").replace(/^PG[A-Z]\s*[-–]\s*/i,"");
-      if (notesStr.length > 36) notesStr = notesStr.substring(0,36) + "…";
+      var diasStr   = buildDaysLabel(pg);
+      var horaStr   = ciMinToHora(pg.start !== undefined ? pg.start : 0);
+      var zonas     = pg.zonasConMin || [];
+      var bgPg      = j % 2 === 0 ? "#fff" : "#f4fbed";
 
-      var zonas = pg.zonasConMin || [];
-      var nZonas = zonas.length;
-      // rowspan del programa = 1 fila programa + 1 fila por zona
-      var pgRowspan = 1 + nZonas;
+      if (zonas.length === 0) {
+        var durStr = pg.dur ? pg.dur + "'" : "—";
+        filas += '<tr style="background:' + bgPg + ';border-bottom:1px solid #d4ecc0">'
+          + '<td style="' + TD + 'text-align:center;color:#666">' + c.n + '</td>'
+          + '<td style="' + TD + 'color:#555;font-size:5pt">' + c.name + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-weight:700;color:#2d6a0a">' + pg.programa + '</td>'
+          + '<td style="' + TD + 'color:#333">—</td>'
+          + '<td style="' + TD + 'text-align:center;color:#444">' + diasStr + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-family:monospace">' + horaStr + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-family:monospace">' + durStr + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + '">' + OBS + '</td>'
+          + '</tr>';
+        continue;
+      }
 
-      // Fila principal del programa — Pg, Notas, Días, Hora, T° con rowspan; círculos y obs también con rowspan
-      filas += '<tr style="background:' + bgPg + ';border-bottom:' + (nZonas ? 'none' : '1px solid #d4ecc0') + '">'
-        + '<td rowspan="' + pgRowspan + '" style="' + TD + 'font-size:6pt;color:#2d6a0a;font-weight:800;text-align:center;width:20px;vertical-align:top;padding-top:4px">' + pg.programa + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="' + TD + 'font-size:5.8pt;color:#333;vertical-align:top;padding-top:3px">' + notesStr + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'font-size:5.8pt;color:#444;width:50px;vertical-align:middle">' + diasStr + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'font-family:monospace;font-size:6pt;width:32px;vertical-align:middle">' + inicioStr + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'font-family:monospace;font-size:6pt;width:26px;vertical-align:middle">' + durStr + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'width:15px;vertical-align:middle">' + CIRC + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'width:15px;vertical-align:middle">' + CIRC + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'width:15px;vertical-align:middle">' + CIRC + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="text-align:center;' + TD + 'width:15px;vertical-align:middle">' + CIRC + '</td>'
-        + '<td rowspan="' + pgRowspan + '" style="' + TD + 'vertical-align:top">' + OBS_LINE + '</td>'
-        + '</tr>';
-
-      // Subfilas de zonas
-      for (var zi = 0; zi < nZonas; zi++) {
-        var zz = zonas[zi];
-        var zNom = (zz.label || "Z" + normZonaId(zz.id)).replace(/^Z[^\s]+\s*/,"");
+      // Una fila por zona
+      for (var zi = 0; zi < zonas.length; zi++) {
+        var zz   = zonas[zi];
         var zId  = "Z" + normZonaId(zz.id);
-        var isLast = zi === nZonas - 1;
-        filas += '<tr style="background:' + bgPg + ';border-bottom:' + (isLast ? '1px solid #d4ecc0' : '1px solid #e8f5de') + '">'
-          + '<td colspan="10" style="padding:0.5px 4px 0.5px 10px;font-size:4.8pt;color:#555;border:1px solid #d4ecc0">'
-          + '<span style="color:#2d6a0a;font-weight:700;font-family:monospace">' + zId + '</span>'
-          + (zNom ? ' <span style="color:#333">' + zNom + '</span>' : '')
-          + (zz.min ? ' <span style="color:#888;margin-left:4px">· ' + zz.min + '\' </span>' : '')
-          + '</td>'
+        var zNom = (zz.label || zId).replace(/^Z[^\s]+\s*/, "");
+        var zMin = zz.min ? zz.min + "'" : "—";
+        var bgZ  = zi % 2 === 0 ? bgPg : (bgPg === "#fff" ? "#f9fdf5" : "#edf7e4");
+        var bBtm = zi === zonas.length - 1 ? "2px solid #b8dda0" : "1px solid #e0f0d0";
+        filas += '<tr style="background:' + bgZ + ';border-bottom:' + bBtm + '">'
+          + '<td style="' + TD + 'text-align:center;color:#666">' + (zi===0 ? c.n : '') + '</td>'
+          + '<td style="' + TD + 'color:#555;font-size:5pt">' + (zi===0 ? c.name : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-weight:700;color:#2d6a0a">' + (zi===0 ? pg.programa : '') + '</td>'
+          + '<td style="' + TD + '"><b style="color:#2d6a0a">' + zId + '</b> ' + zNom + '</td>'
+          + '<td style="' + TD + 'text-align:center;color:#444">' + (zi===0 ? diasStr : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-family:monospace">' + (zi===0 ? horaStr : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center;font-family:monospace;font-weight:700;color:#2d6a0a">' + zMin + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + (zi===0 ? CIRC : '') + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + 'text-align:center">' + CIRC + '</td>'
+          + '<td style="' + TD + '">' + OBS + '</td>'
           + '</tr>';
       }
     }
   }
 
-  var THEAD = '<thead>'
-    + '<tr style="background:#2d6a0a;color:#fff">'
-    + '<th style="width:17px;padding:3px 2px;border:1px solid #1e4d06;font-size:5.5pt">N°</th>'
-    + '<th style="width:20px;text-align:center;padding:3px 2px;border:1px solid #1e4d06;font-size:5.5pt">Pg</th>'
-    + '<th style="text-align:left;padding:3px 4px;border:1px solid #1e4d06;font-size:5.5pt">Notas programa</th>'
-    + '<th style="width:50px;padding:3px 2px;border:1px solid #1e4d06;font-size:5.5pt">Días</th>'
-    + '<th style="width:32px;padding:3px 2px;border:1px solid #1e4d06;font-size:5.5pt">Hora<br>inicio</th>'
-    + '<th style="width:26px;padding:3px 2px;border:1px solid #1e4d06;font-size:5.5pt">T°<br>min</th>'
-    + '<th style="width:15px;padding:3px 1px;border:1px solid #1e4d06;font-size:5pt">Día<br>✓</th>'
-    + '<th style="width:15px;padding:3px 1px;border:1px solid #1e4d06;font-size:5pt">Hora<br>✓</th>'
-    + '<th style="width:15px;padding:3px 1px;border:1px solid #1e4d06;font-size:5pt">T°<br>✓</th>'
-    + '<th style="width:15px;padding:3px 1px;border:1px solid #1e4d06;font-size:5pt">OK<br>✓</th>'
-    + '<th style="text-align:left;padding:3px 4px;border:1px solid #1e4d06;font-size:5.5pt">Observación</th>'
+  var THEAD = '<thead><tr style="background:#2d6a0a;color:#fff">'
+    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">N°</th>'
+    + '<th style="text-align:left;padding:2px 3px;border:1px solid #1e4d06;font-size:5pt;width:55px">Controlador</th>'
+    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Pg</th>'
+    + '<th style="text-align:left;padding:2px 3px;border:1px solid #1e4d06;font-size:5pt">Zona</th>'
+    + '<th style="width:42px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Días/Frec</th>'
+    + '<th style="width:28px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Hora</th>'
+    + '<th style="width:22px;padding:2px 1px;border:1px solid #1e4d06;font-size:5pt">Dur\'</th>'
+    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4pt">✓/✗<br>RainBird</th>'
+    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4.5pt">✓<br>Días</th>'
+    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4.5pt">✓<br>Hora</th>'
+    + '<th style="width:14px;padding:2px 1px;border:1px solid #1e4d06;font-size:4.5pt">✓<br>Dur</th>'
+    + '<th style="text-align:left;padding:2px 3px;border:1px solid #1e4d06;font-size:5pt">Observación / vs RainBird</th>'
     + '</tr></thead>';
 
   var css = '@page{size:A4 portrait;margin:6mm 8mm 5mm 8mm}'
