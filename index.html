@@ -3021,13 +3021,23 @@ function parseZonaMins(zonaStr, zonasExcel) {
   }
   return map;
 }
-function buildZonasCheckboxes(ctrl) {
+function buildZonasCheckboxes(ctrl, overrideZonasConMin) {
+  // overrideZonasConMin: [{id, min}] — usado al editar para mostrar datos reales del programa guardado
   var container = document.getElementById("ed-zonas-list");
   if (!container) return;
   var zonas = ctrl.zonas || [];
   var minMap = {};
   var zonasEnPrograma = {};
-  if (selectedPrograma !== "NUEVO") {
+
+  if (overrideZonasConMin && overrideZonasConMin.length > 0) {
+    // Modo edición: usar los datos reales guardados en PROGRAMS
+    for (var oi = 0; oi < overrideZonasConMin.length; oi++) {
+      var oz = overrideZonasConMin[oi];
+      var ozid = String(oz.id);
+      zonasEnPrograma[ozid] = true;
+      minMap[ozid] = oz.min || 15;
+    }
+  } else if (selectedPrograma !== "NUEVO") {
     var pgs = ctrl.programas || [];
     for (var pi = 0; pi < pgs.length; pi++) {
       var pg = pgs[pi];
@@ -3370,54 +3380,14 @@ function editProgram(id) {
   for (var i = 0; i < CONTROLLERS.length; i++) {
     if (CONTROLLERS[i].n === p.sectorN) { ctrl = CONTROLLERS[i]; break; }
   }
-  if (ctrl) buildZonasCheckboxes(ctrl);
+  // Construir zonas con los datos reales del programa guardado
   var zonasToRestore = null;
   if (p.zonasConMin && p.zonasConMin.length > 0) {
     zonasToRestore = p.zonasConMin;
   } else if (p.zonas && p.zonas.length > 0) {
     zonasToRestore = p.zonas.map(function(z) { return { id: z, min: 15 }; });
   }
-  if (zonasToRestore) {
-    var idx = 0;
-    while (document.getElementById("zona-cb-" + idx)) {
-      var cb  = document.getElementById("zona-cb-" + idx);
-      var inp = document.getElementById("zona-min-" + idx);
-      var row = document.getElementById("zona-row-" + idx);
-      cb.checked = false;
-      if (inp) inp.disabled = true;
-      if (row) { row.style.background = "var(--panel)"; row.style.opacity = "0.45"; }
-      idx++;
-    }
-    for (var zi = 0; zi < zonasToRestore.length; zi++) {
-      var zz = zonasToRestore[zi];
-      var idx2 = 0;
-      while (document.getElementById("zona-cb-" + idx2)) {
-        var cb2 = document.getElementById("zona-cb-" + idx2);
-        if (cb2.value === String(zz.id)) {
-          cb2.checked = true;
-          var inp2 = document.getElementById("zona-min-" + idx2);
-          var row2 = document.getElementById("zona-row-" + idx2);
-          if (inp2) { inp2.value = zz.min || 15; inp2.disabled = false; }
-          if (row2) { row2.style.background = "var(--panel2)"; row2.style.opacity = "1"; }
-          break;
-        }
-        idx2++;
-      }
-    }
-    recalcTotalDur();
-  } else {
-    var idx3 = 0;
-    while (document.getElementById("zona-cb-" + idx3)) {
-      var cb3  = document.getElementById("zona-cb-" + idx3);
-      var inp3 = document.getElementById("zona-min-" + idx3);
-      var row3 = document.getElementById("zona-row-" + idx3);
-      cb3.checked = false;
-      if (inp3) inp3.disabled = true;
-      if (row3) { row3.style.background = "var(--panel)"; row3.style.opacity = "0.45"; }
-      idx3++;
-    }
-    recalcTotalDur();
-  }
+  if (ctrl) buildZonasCheckboxes(ctrl, zonasToRestore || []);
   var startEl = document.getElementById("ed-start");
   if (startEl) startEl.value = minToHHMM(p.start);
   var freqBtns = document.querySelectorAll(".freq-tab");
