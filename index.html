@@ -6625,22 +6625,10 @@ function printCheckin() {
     var progs = PROGRAMS.filter(function(p){ return p.sectorN === c.n; });
     progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
 
-    // Calcular tiempo total del controlador (suma de todos los min de zonas)
-    var totalMin = 0;
-    for (var pi = 0; pi < progs.length; pi++) {
-      var zs = progs[pi].zonasConMin || [];
-      for (var zi2 = 0; zi2 < zs.length; zi2++) {
-        totalMin += (zs[zi2].min || 0);
-      }
-      if (zs.length === 0 && progs[pi].dur) totalMin += progs[pi].dur;
-    }
-    var totalStr = totalMin > 0 ? (totalMin >= 60 ? Math.floor(totalMin/60)+"h " + (totalMin%60 > 0 ? totalMin%60+"'" : "") : totalMin+"'") : "—";
-
-    // Título del bloque
+    // Título del bloque — sin tiempo total
     bloques += '<div class="ctrl-bloque">'
       + '<div class="ctrl-titulo">'
       + '<span>N°' + c.n + ' &nbsp;·&nbsp; ' + c.name + (bomba ? ' &nbsp;<span class="ctrl-subtit">· ' + bomba + '</span>' : '') + '</span>'
-      + '<span class="ctrl-dur">T° total: ' + totalStr + '</span>'
       + '</div>';
 
     if (progs.length === 0) {
@@ -6648,9 +6636,10 @@ function printCheckin() {
       continue;
     }
 
-    // Tabla de zonas — cols: Zona | ○Días | ○Hora | ○Dur | ○Próx. | Observación
+    // Tabla: Pg | Zona | ○Días | ○Hora | ○Dur | ○Próx. | Observación
     bloques += '<table class="zt">'
       + '<thead><tr>'
+      + '<th style="width:16px">Pg</th>'
       + '<th class="lft" style="width:auto">Zona</th>'
       + '<th style="width:22px">○<br>Días</th>'
       + '<th style="width:22px">○<br>Hora</th>'
@@ -6662,10 +6651,13 @@ function printCheckin() {
     for (var j = 0; j < progs.length; j++) {
       var pg = progs[j];
       var zonas = pg.zonasConMin || [];
+      // Separador visual entre programas (excepto el primero)
+      var pgSepStyle = j > 0 ? 'border-top:2px solid #b8dda0' : '';
 
       if (zonas.length === 0) {
-        bloques += '<tr>'
-          + '<td style="color:#aaa;font-style:italic">' + pg.programa + ' (sin zonas)</td>'
+        bloques += '<tr style="' + pgSepStyle + '">'
+          + '<td style="text-align:center;font-weight:700;color:#2d6a0a">' + pg.programa + '</td>'
+          + '<td style="color:#aaa;font-style:italic">sin zonas registradas</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
@@ -6679,13 +6671,15 @@ function printCheckin() {
         var zz   = zonas[zi];
         var zId  = "Z" + normZonaId(zz.id);
         var zNom = (zz.label || zId).replace(/^Z[^\s]+\s*/, "");
-        bloques += '<tr>'
+        var rowStyle = (zi === 0 && j > 0) ? 'border-top:2px solid #b8dda0' : '';
+        bloques += '<tr style="' + rowStyle + '">'
+          + '<td style="text-align:center;font-weight:700;color:#2d6a0a;font-size:6.5pt">' + (zi === 0 ? pg.programa : '') + '</td>'
           + '<td><b style="color:#2d6a0a;font-size:5.5pt">' + zId + '</b> ' + zNom + '</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
           + '<td style="text-align:center">' + CIRC + '</td>'
-          + '<td style="border-bottom:1px solid #ddd"></td>'
+          + '<td></td>'
           + '</tr>';
       }
     }
