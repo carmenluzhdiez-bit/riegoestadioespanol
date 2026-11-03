@@ -6693,37 +6693,37 @@ function printCheckin() {
     bloques += '</tbody></table></div>';
   }
 
-  // ── Armar ventana de impresión — siempre nueva, nunca reutilizar ────────
-  var w = window.open("", null, "width=860,height=700");
-  if (!w) { alert("Permite ventanas emergentes para imprimir."); return; }
-  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-    + '<title>Check-in Controladores · PMR EE</title>'
-    + '<style>' + css + '</style></head><body>');
-
-  w.document.write('<div class="hdr">'
+  // ── Armar HTML completo ──────────────────────────────────────────────────
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    + '<title>Check-in</title><style>' + css + '</style></head><body>'
+    + '<div class="hdr">'
     + '<div class="marca">ÁREAS VERDES<br><span style="font-size:7pt;font-weight:400;color:#555">Dpto. · Estadio Español</span></div>'
     + '<div class="tt"><b>CHECK-IN CONTROLADORES DE RIEGO</b>'
     + '<span>Corroboración app Rain Bird · 14 controladores ESP-TM2 · uso con plumón pizarra</span></div>'
-    + '</div>');
-
-  w.document.write('<div class="meta">'
+    + '</div>'
+    + '<div class="meta">'
     + '<div class="mb"><div class="l">Responsable</div><div class="v">' + responsable + '</div></div>'
     + '<div class="mb" style="flex:0.4"><div class="l">Fecha</div><div class="v">' + semana + '</div></div>'
-    + '</div>');
+    + '</div>'
+    + bloques
+    + '<div class="bomba-aviso"><b style="color:#2d6a0a">⚠ Comparten bomba — no operar simultáneamente:</b>&nbsp;&nbsp;'
+    + '<b>Bomba A:</b> N°4 · N°5 &nbsp;·&nbsp; <b>Bomba B:</b> N°7 · N°8 &nbsp;·&nbsp; <b>Bomba C:</b> N°9 · N°10 · N°11</div>'
+    + '<div class="ft"><span>Estadio Español · Áreas Verdes · Carmen Luz Hermosilla H.</span>'
+    + '<span>PMR EE · planilla plastificada · limpiar con paño húmedo</span></div>'
+    + '</body></html>';
 
-  w.document.write(bloques);
-
-  w.document.write('<div class="bomba-aviso"><b style="color:#2d6a0a">⚠ Comparten bomba — no operar simultáneamente:</b>&nbsp;&nbsp;'
-    + '<b>Bomba A:</b> N°4 · N°5 &nbsp;·&nbsp; <b>Bomba B:</b> N°7 · N°8 &nbsp;·&nbsp; <b>Bomba C:</b> N°9 · N°10 · N°11</div>');
-
-  w.document.write('<div class="ft">'
-    + '<span>Estadio Español · Áreas Verdes · Carmen Luz Hermosilla H.</span>'
-    + '<span>PMR EE · planilla plastificada · limpiar con paño húmedo</span>'
-    + '</div>');
-
-  w.document.write('<script>window.onload=function(){window.print();}<\/script>');
-  w.document.write('</body></html>');
-  w.document.close();
+  // ── Imprimir vía iframe oculto (sin ventana emergente, sin caché) ────────
+  var old = document.getElementById("__ci_print_frame");
+  if (old) old.parentNode.removeChild(old);
+  var fr = document.createElement("iframe");
+  fr.id = "__ci_print_frame";
+  fr.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none";
+  document.body.appendChild(fr);
+  fr.contentDocument.open();
+  fr.contentDocument.write(html);
+  fr.contentDocument.close();
+  fr.contentWindow.focus();
+  setTimeout(function(){ fr.contentWindow.print(); }, 800);
 }
 </script>
 </body>
