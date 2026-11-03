@@ -6560,63 +6560,98 @@ var CI_BOMBAS = {
 // Estado temporal en memoria (no se guarda)
 var ciState = {}; // {n: {ok: bool, hora:"", tiempo:"", obs:""}}
 
+function ciMinToHora(min) {
+  var h = Math.floor(min/60) % 24;
+  var m = min % 60;
+  return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
+}
+function ciDaysStr(days) {
+  if (!days || days.length===0) return "—";
+  if (days.length===7) return "diario";
+  return days.join("-");
+}
+
 function buildCheckin() {
-  // Inicializar fecha y hora si vacías
+  // Inicializar campos si vacíos
   var fechaEl = document.getElementById("ci-fecha");
   var horaEl  = document.getElementById("ci-hora");
-  if (fechaEl && !fechaEl.value) {
-    var now = new Date();
-    fechaEl.value = now.toISOString().slice(0,10);
-  }
-  if (horaEl && !horaEl.value) {
-    var now2 = new Date();
-    horaEl.value = now2.toTimeString().slice(0,5);
-  }
-  // Fecha check-in
-  var semEl = document.getElementById("ci-semana");
-  if (semEl && !semEl.value) {
-    semEl.value = new Date().toISOString().slice(0,10);
-  }
+  var semEl   = document.getElementById("ci-semana");
+  var now = new Date();
+  if (fechaEl && !fechaEl.value) fechaEl.value = now.toISOString().slice(0,10);
+  if (horaEl  && !horaEl.value)  horaEl.value  = now.toTimeString().slice(0,5);
+  if (semEl   && !semEl.value)   semEl.value   = now.toISOString().slice(0,10);
 
   var ctrls = CONTROLLERS.slice().sort(function(a,b){ return a.n - b.n; });
-  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.75rem">';
-  html += '<thead><tr style="background:var(--panel2);border-bottom:2px solid var(--green)">';
-  html += '<th style="padding:7px 5px;text-align:center;width:28px;color:var(--muted)">N°</th>';
-  html += '<th style="padding:7px 8px;text-align:left;color:var(--muted)">Controlador / Sector</th>';
-  html += '<th style="padding:7px 5px;text-align:center;width:64px;color:var(--muted)">Bomba</th>';
-  html += '<th style="padding:7px 5px;text-align:center;width:90px;color:var(--muted)">Hora inicio</th>';
-  html += '<th style="padding:7px 5px;text-align:center;width:90px;color:var(--muted)">T° riego</th>';
-  html += '<th style="padding:7px 5px;text-align:center;width:52px;color:var(--muted)">✓ OK</th>';
-  html += '<th style="padding:7px 8px;text-align:left;color:var(--muted)">Observación</th>';
-  html += '</tr></thead><tbody>';
+
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.72rem">';
+  html += '<thead><tr style="background:var(--panel2);border-bottom:2px solid var(--green)">'
+    + '<th style="padding:6px 4px;text-align:center;width:24px;color:var(--muted)">N°</th>'
+    + '<th style="padding:6px 4px;text-align:center;width:28px;color:var(--muted)">Pg</th>'
+    + '<th style="padding:6px 8px;text-align:left;color:var(--muted)">Notas programa</th>'
+    + '<th style="padding:6px 4px;text-align:center;width:70px;color:var(--muted)">Días</th>'
+    + '<th style="padding:6px 4px;text-align:center;width:56px;color:var(--muted)">Hora inicio</th>'
+    + '<th style="padding:6px 4px;text-align:center;width:46px;color:var(--muted)">T° (min)</th>'
+    + '<th style="padding:6px 4px;text-align:center;width:36px;color:var(--muted)">✓ OK</th>'
+    + '<th style="padding:6px 8px;text-align:left;color:var(--muted)">Observación</th>'
+    + '</tr></thead><tbody>';
 
   for (var i = 0; i < ctrls.length; i++) {
     var c = ctrls[i];
     var n = c.n;
-    var st = ciState[n] || {};
-    var bg = i % 2 === 1 ? "background:var(--panel2)" : "background:var(--panel)";
-    var okBg = st.ok ? "background:var(--green);color:#000" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
-    html += '<tr style="' + bg + ';border-bottom:1px solid var(--border)">';
-    html += '<td style="padding:6px 5px;text-align:center;font-weight:800;color:var(--green)">' + n + '</td>';
-    html += '<td style="padding:6px 8px;font-weight:600;color:var(--text)">' + c.name + '</td>';
-    html += '<td style="padding:6px 5px;text-align:center;color:var(--muted);font-size:0.65rem">' + (CI_BOMBAS[n] || '—') + '</td>';
-    html += '<td style="padding:4px 5px"><input type="time" value="' + (st.hora||'') + '" oninput="ciSet(' + n + ',\'hora\',this.value)" style="width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem"></td>';
-    html += '<td style="padding:4px 5px"><input type="text" placeholder="ej: 45 min" value="' + (st.tiempo||'') + '" oninput="ciSet(' + n + ',\'tiempo\',this.value)" style="width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem"></td>';
-    html += '<td style="padding:4px 5px;text-align:center"><button onclick="ciToggleOk(' + n + ')" style="width:34px;height:28px;border-radius:7px;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;' + okBg + '">' + (st.ok ? '✓' : '○') + '</button></td>';
-    html += '<td style="padding:4px 8px"><input type="text" placeholder="sin novedad" value="' + (st.obs||'') + '" oninput="ciSet(' + n + ',\'obs\',this.value)" style="width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:0.72rem"></td>';
-    html += '</tr>';
+    // Programas reales de PROGRAMS para este controlador
+    var progs = PROGRAMS.filter(function(p){ return p.sectorN === n; });
+    progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
+
+    // Fila encabezado controlador
+    html += '<tr style="background:var(--panel2);border-top:2px solid var(--green)">'
+      + '<td style="padding:4px 4px;text-align:center;font-weight:900;color:var(--green);font-size:0.8rem" rowspan="' + (progs.length||1) + '">' + n + '</td>';
+
+    if (progs.length === 0) {
+      html += '<td colspan="7" style="padding:4px 8px;color:var(--muted);font-style:italic">' + c.name + ' — sin programas registrados</td></tr>';
+      continue;
+    }
+
+    // Primera fila = primer programa + nombre controlador en notas
+    var p0 = progs[0];
+    var st0 = ciState[n+"_"+p0.id] || {};
+    var okBg0 = st0.ok ? "background:var(--green);color:#000" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
+    html += '<td style="padding:3px 4px;text-align:center;font-weight:700;color:var(--amber);font-size:0.7rem">' + p0.programa + '</td>'
+      + '<td style="padding:3px 8px;color:var(--text)"><span style="font-weight:700;color:var(--text-dim)">' + c.name + '</span> <span style="color:var(--muted);font-size:0.66rem">— ' + (p0.notes||'') + '</span></td>'
+      + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p0.days) + '</td>'
+      + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + ciMinToHora(p0.start) + '</td>'
+      + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + (p0.dur||'—') + '</td>'
+      + '<td style="padding:3px 4px;text-align:center"><button onclick="ciToggleOk(\''+n+'_'+p0.id+'\')" style="width:28px;height:24px;border-radius:6px;border:none;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBg0+'">'+(st0.ok?'✓':'○')+'</button></td>'
+      + '<td style="padding:3px 6px"><input type="text" placeholder="sin novedad" value="'+(st0.obs||'')+'" oninput="ciSet(\''+n+'_'+p0.id+'\',\'obs\',this.value)" style="width:100%;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>'
+      + '</tr>';
+
+    // Filas siguientes programas
+    for (var j = 1; j < progs.length; j++) {
+      var p = progs[j];
+      var stj = ciState[n+"_"+p.id] || {};
+      var bg = j % 2 === 0 ? "background:var(--panel)" : "background:var(--bg)";
+      var okBgJ = stj.ok ? "background:var(--green);color:#000" : "background:var(--panel);color:var(--muted);border:1px solid var(--border)";
+      html += '<tr style="'+bg+';border-bottom:1px solid var(--border)">'
+        + '<td style="padding:3px 4px;text-align:center;font-weight:700;color:var(--amber);font-size:0.7rem">' + p.programa + '</td>'
+        + '<td style="padding:3px 8px;color:var(--muted);font-size:0.68rem">' + (p.notes||'') + '</td>'
+        + '<td style="padding:3px 4px;text-align:center;color:var(--muted);font-size:0.66rem">' + ciDaysStr(p.days) + '</td>'
+        + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + ciMinToHora(p.start) + '</td>'
+        + '<td style="padding:3px 4px;text-align:center;color:var(--text)">' + (p.dur||'—') + '</td>'
+        + '<td style="padding:3px 4px;text-align:center"><button onclick="ciToggleOk(\''+n+'_'+p.id+'\')" style="width:28px;height:24px;border-radius:6px;border:none;cursor:pointer;font-size:0.7rem;font-weight:700;'+okBgJ+'">'+(stj.ok?'✓':'○')+'</button></td>'
+        + '<td style="padding:3px 6px"><input type="text" placeholder="sin novedad" value="'+(stj.obs||'')+'" oninput="ciSet(\''+n+'_'+p.id+'\',\'obs\',this.value)" style="width:100%;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:0.68rem"></td>'
+        + '</tr>';
+    }
   }
   html += '</tbody></table></div>';
   document.getElementById("ci-tabla").innerHTML = html;
 }
 
-function ciSet(n, field, val) {
-  if (!ciState[n]) ciState[n] = {};
-  ciState[n][field] = val;
+function ciSet(key, field, val) {
+  if (!ciState[key]) ciState[key] = {};
+  ciState[key][field] = val;
 }
-function ciToggleOk(n) {
-  if (!ciState[n]) ciState[n] = {};
-  ciState[n].ok = !ciState[n].ok;
+function ciToggleOk(key) {
+  if (!ciState[key]) ciState[key] = {};
+  ciState[key].ok = !ciState[key].ok;
   buildCheckin();
 }
 function resetCheckin() {
@@ -6641,49 +6676,49 @@ function printCheckin() {
   var filas = "";
   var OBS_LINE = '<div style="border-bottom:1px solid #bbb;height:9px;margin:3px 2px"></div>';
   var CIRC = '<div style="width:10px;height:10px;border:1.5px solid #2d6a0a;border-radius:50%;margin:auto"></div>';
-
-  // Estilos de celda reutilizables
   var BRD = "border:1px solid #c8e6b0;";
   var TD  = "padding:2px 4px;" + BRD;
 
   for (var i = 0; i < ctrls.length; i++) {
     var c = ctrls[i];
     var bomba = CI_BOMBAS[c.n] || '—';
-    var progs = c.programas || [];
+    // Leer programas REALES de PROGRAMS (igual que pestaña Controladores)
+    var progs = PROGRAMS.filter(function(p){ return p.sectorN === c.n; });
+    progs.sort(function(a,b){ return (a.programa||"").localeCompare(b.programa||""); });
     var nProgs = progs.length;
 
-    // Fila encabezado del controlador (verde)
+    // Fila encabezado controlador (verde)
     filas += '<tr style="background:#c8e8a8;border-bottom:1px solid #8dc068">'
-      + '<td style="text-align:center;font-weight:900;font-size:8pt;color:#1e4d06;' + BRD + 'padding:3px 2px" rowspan="' + (nProgs+1) + '">' + c.n + '</td>'
-      + '<td style="font-weight:800;font-size:7.5pt;color:#1a4005;' + BRD + 'padding:3px 6px" colspan="3"><b>' + c.name + '</b></td>'
-      + '<td style="text-align:center;font-size:6.5pt;color:#3a6010;' + BRD + 'padding:2px 3px" colspan="2">' + bomba + '</td>'
-      + '<td colspan="4" style="' + BRD + '">' + OBS_LINE + '</td>'  // obs controlador
+      + '<td style="text-align:center;font-weight:900;font-size:7.5pt;color:#1e4d06;' + BRD + 'padding:3px 2px" rowspan="' + (nProgs||1) + '">' + c.n + '</td>'
+      + '<td style="font-weight:800;font-size:7pt;color:#1a4005;' + BRD + 'padding:3px 5px" colspan="2"><b>' + c.name + '</b> <span style="font-weight:400;font-size:5.5pt;color:#3a6010">' + bomba + '</span></td>'
+      + '<td colspan="7" style="' + BRD + 'padding:2px 4px;font-size:5.5pt;color:#555">'
+      + (nProgs === 0 ? '<i>sin programas registrados</i>' : nProgs + ' programa' + (nProgs>1?'s':'') + ' activo' + (nProgs>1?'s':''))
+      + OBS_LINE + '</td>'
       + '</tr>';
 
-    // Filas de programas
+    if (nProgs === 0) continue;
+
+    // Filas de programas reales
     for (var j = 0; j < nProgs; j++) {
       var pg = progs[j];
-      var pgLabel = pg.pg || ("Pg "+(j+1));
       var bgPg = j % 2 === 0 ? "#fff" : "#f2fbea";
-      // Descripción corta del programa: tomar solo lo antes de " — " o hasta 28 chars
-      var pgDesc = pg.zonas ? pg.zonas : "";
-      if (pgDesc.length > 34) pgDesc = pgDesc.substring(0,34) + "…";
-      var durStr = pg.durMin ? pg.durMin + "'" : "—";
-      var inicioStr = pg.inicio || "—";
-      var diasStr = pg.dias || "—";
+      var diasStr = pg.days && pg.days.length===7 ? "diario" : (pg.days ? pg.days.join("-") : "—");
+      var inicioStr = ciMinToHora(pg.start || 0);
+      var durStr = pg.dur ? pg.dur + "'" : "—";
+      var notesStr = pg.notes ? pg.notes : "";
+      if (notesStr.length > 38) notesStr = notesStr.substring(0,38) + "…";
 
       filas += '<tr style="background:' + bgPg + ';border-bottom:1px solid #d4ecc0">'
-        // N° ya tiene rowspan, no se repite
-        + '<td style="' + TD + 'padding-left:9px;font-size:6.2pt;color:#2d6a0a;font-weight:700;white-space:nowrap;width:28px">Pg ' + pgLabel.replace(/^(Pg\s*|Programa\s*)/i,"") + '</td>'
-        + '<td style="' + TD + 'font-size:6pt;color:#333;max-width:100px;overflow:hidden">' + pgDesc + '</td>'
-        + '<td style="text-align:center;' + TD + 'font-size:6.5pt;color:#555;width:48px">' + diasStr + '</td>'
-        + '<td style="text-align:center;' + TD + 'font-family:monospace;font-size:7pt;width:36px">' + inicioStr + '</td>'
-        + '<td style="text-align:center;' + TD + 'font-family:monospace;font-size:7pt;width:30px">' + durStr + '</td>'
-        + '<td style="text-align:center;' + TD + 'width:18px">' + CIRC + '</td>'  // Día ✓
-        + '<td style="text-align:center;' + TD + 'width:18px">' + CIRC + '</td>'  // Hora ✓
-        + '<td style="text-align:center;' + TD + 'width:18px">' + CIRC + '</td>'  // Tiempo ✓
-        + '<td style="text-align:center;' + TD + 'width:18px">' + CIRC + '</td>'  // OK ✓
-        + '<td style="' + TD + 'min-width:60px">' + OBS_LINE + '</td>'
+        + '<td style="' + TD + 'padding-left:7px;font-size:6pt;color:#2d6a0a;font-weight:700;width:24px">' + pg.programa + '</td>'
+        + '<td style="' + TD + 'font-size:5.8pt;color:#333">' + notesStr + '</td>'
+        + '<td style="text-align:center;' + TD + 'font-size:6pt;color:#555;width:46px">' + diasStr + '</td>'
+        + '<td style="text-align:center;' + TD + 'font-family:monospace;font-size:6.5pt;width:34px">' + inicioStr + '</td>'
+        + '<td style="text-align:center;' + TD + 'font-family:monospace;font-size:6.5pt;width:28px">' + durStr + '</td>'
+        + '<td style="text-align:center;' + TD + 'width:16px">' + CIRC + '</td>'
+        + '<td style="text-align:center;' + TD + 'width:16px">' + CIRC + '</td>'
+        + '<td style="text-align:center;' + TD + 'width:16px">' + CIRC + '</td>'
+        + '<td style="text-align:center;' + TD + 'width:16px">' + CIRC + '</td>'
+        + '<td style="' + TD + 'min-width:55px">' + OBS_LINE + '</td>'
         + '</tr>';
     }
   }
