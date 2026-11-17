@@ -4430,6 +4430,56 @@ function showSyncBadge(msg) {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(function() { bc.style.display = "none"; }, 3000);
 }
+
+// ── Recarga de datos desde Firebase ─────────────────────────────────────────
+var autoRefreshTimer = null;
+var autoRefreshCountdownTimer = null;
+var AUTO_REFRESH_SEC = 300; // 5 minutos
+
+function refreshData() {
+  var btn = document.getElementById("btn-refresh-data");
+  if (btn) { btn.textContent = "⏳"; btn.disabled = true; }
+  loadFromStorage(function() {
+    var savedIdx = currentDateIdx;
+    buildPMR();
+    currentDateIdx = savedIdx;
+    buildScheduleForDate(currentDateIdx);
+    if (btn) { btn.textContent = "🔄"; btn.disabled = false; }
+    var cd = document.getElementById("refresh-countdown");
+    if (cd) cd.textContent = "actualizado";
+    setTimeout(function() {
+      var cd2 = document.getElementById("refresh-countdown");
+      if (cd2) cd2.textContent = "";
+    }, 2000);
+    resetAutoRefreshCountdown();
+  });
+}
+
+function resetAutoRefreshCountdown() {
+  clearInterval(autoRefreshCountdownTimer);
+  var remaining = AUTO_REFRESH_SEC;
+  autoRefreshCountdownTimer = setInterval(function() {
+    remaining--;
+    var cd = document.getElementById("refresh-countdown");
+    if (cd) {
+      var m = Math.floor(remaining / 60);
+      var s = remaining % 60;
+      cd.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+    }
+    if (remaining <= 0) {
+      clearInterval(autoRefreshCountdownTimer);
+    }
+  }, 1000);
+}
+
+function startAutoRefresh() {
+  clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(function() {
+    refreshData();
+  }, AUTO_REFRESH_SEC * 1000);
+  resetAutoRefreshCountdown();
+}
+
 function getNormalizedZonas(ev) {
   var raw = ev.zonas || ev.zonasConMin || [];
   var result = [];
@@ -4958,8 +5008,11 @@ function doLogin() {
   var bc = document.getElementById("role-badge-container");
   if (bc) {
     bc.innerHTML = '<span class="role-badge ' + info.cls + '">' + info.label + '</span>'
+      + ' <button id="btn-refresh-data" onclick="refreshData()" title="Recargar datos desde Firebase" style="background:rgba(74,140,28,0.15);border:1px solid rgba(74,140,28,0.4);border-radius:6px;color:var(--green);font-size:0.72rem;padding:2px 8px;cursor:pointer;font-family:var(--font-mono)">🔄</button>'
+      + ' <span id="refresh-countdown" style="font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);margin-left:2px"></span>'
       + (role === "admin" ? ' <span id="sync-badge" style="display:none;font-family:var(--font-mono);font-size:0.6rem;color:var(--green);margin-left:6px"></span>' : '');
   }
+  startAutoRefresh();
   var loginBtn = document.querySelector("#login-screen button");
   if (loginBtn) loginBtn.textContent = "Cargando datos...";
   loadFromStorage(function() {
