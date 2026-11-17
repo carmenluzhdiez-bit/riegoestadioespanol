@@ -4341,6 +4341,11 @@ function saveToStorage() {
     climaThresholds: CLIMA_THRESHOLDS,
     savedAt: new Date().toISOString()
   };
+  saveToStorageWithRetry(data, 1);
+}
+
+function saveToStorageWithRetry(data, attempt) {
+  showSyncBadge(attempt === 1 ? "💾 Guardando..." : "🔄 Reintentando (" + attempt + "/3)...");
   fetch(FB_URL + ".json?auth=" + FB_SECRET, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -4348,12 +4353,51 @@ function saveToStorage() {
   })
   .then(function(r) {
     if (r.ok) {
-      showSyncBadge("✓ Sincronizado");
+      hideSaveError();
+      showSyncBadge("✓ Guardado");
       saveClimaThresholds();
+    } else {
+      handleSaveFailure(data, attempt, "Error servidor " + r.status);
     }
-    else showSyncBadge("⚠ Error " + r.status);
   })
-  .catch(function() { showSyncBadge("⚠ Sin conexión"); });
+  .catch(function() {
+    handleSaveFailure(data, attempt, "Sin conexión");
+  });
+}
+
+function handleSaveFailure(data, attempt, reason) {
+  if (attempt < 3) {
+    showSyncBadge("⚠ " + reason + " — reintentando en 10s...");
+    setTimeout(function() { saveToStorageWithRetry(data, attempt + 1); }, 10000);
+  } else {
+    showSyncBadge("⚠ No guardado");
+    showSaveError("⚠️ No se pudo guardar en Firebase (" + reason + "). Los datos están en memoria pero NO sincronizados. No cierres ni recargues la app.");
+  }
+}
+
+function showSaveError(msg) {
+  var el = document.getElementById("save-error-banner");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "save-error-banner";
+    el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-family:var(--font-mono);font-size:0.82rem;font-weight:700;padding:10px 16px;text-align:center;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.4)";
+    var txt = document.createElement("span");
+    txt.id = "save-error-text";
+    var btn = document.createElement("button");
+    btn.textContent = "🔄 Reintentar ahora";
+    btn.style.cssText = "background:#fff;color:#dc2626;border:none;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;white-space:nowrap";
+    btn.onclick = function() { hideSaveError(); saveToStorage(); };
+    el.appendChild(txt);
+    el.appendChild(btn);
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  document.getElementById("save-error-text").textContent = msg;
+  el.style.display = "flex";
+}
+
+function hideSaveError() {
+  var el = document.getElementById("save-error-banner");
+  if (el) el.style.display = "none";
 }
 function saveClimaThresholds() {
   fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET, {
@@ -4428,7 +4472,10 @@ function showSyncBadge(msg) {
   bc.textContent = msg;
   bc.style.display = "inline-block";
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(function() { bc.style.display = "none"; }, 3000);
+  // Solo ocultar automáticamente si es mensaje de éxito, no si está en proceso
+  if (msg.indexOf("💾") === -1 && msg.indexOf("🔄") === -1) {
+    syncTimer = setTimeout(function() { bc.style.display = "none"; }, 4000);
+  }
 }
 
 // ── Recarga de datos desde Firebase ─────────────────────────────────────────
