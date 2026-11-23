@@ -227,9 +227,11 @@
  color: var(--green); white-space: nowrap;
  }
  .sr-zones {
- display: flex; flex-wrap: wrap; gap: 3px;
- margin-top: 2px;
+ display: none;
+ flex-wrap: wrap; gap: 3px;
+ margin-top: 4px;
  }
+ .schedule-row.expanded .sr-zones { display: flex; }
  .sr-zone-chip {
  font-family: var(--font-mono); font-size: 0.58rem;
  padding: 1px 5px; border-radius: 4px;
@@ -238,6 +240,11 @@
  }
  .sr-zone-chip span { color: var(--blue); margin-right: 3px; }
  .sr-zone-chip em { color: var(--green); font-style: normal; font-weight: 700; margin-left: 3px; }
+ .sr-expand-btn {
+ font-family: var(--font-mono); font-size: 0.55rem;
+ color: var(--muted); background: none; border: none;
+ cursor: pointer; padding: 0 2px; opacity: 0.6;
+ }
  .time-tag {
  font-family: var(--font-mono); font-size: 0.65rem;
  color: var(--blue); background: #0ea5e910;
@@ -2503,6 +2510,13 @@ function selectDate(idx) {
   buildDateNav();
   buildScheduleForDate(idx);
 }
+function toggleSRZones(btn) {
+  var row = btn.closest(".schedule-row");
+  if (!row) return;
+  var expanded = row.classList.toggle("expanded");
+  btn.textContent = (expanded ? "▴ " : "▾ ") + btn.textContent.replace(/^[▴▾]\s*/,"");
+}
+
 function buildScheduleForDate(idx) {
   var dateStr = DATES[idx];
   document.getElementById("day-title").textContent = dateStr;
@@ -2610,8 +2624,11 @@ function buildScheduleForDate(idx) {
       + (esPrevSusp ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido (prev.)</span>' : '')
       + '</span>';
     html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
+    if (zonasConMin.length > 0) {
+      html += '<button class="sr-expand-btn" onclick="toggleSRZones(this)" title="Ver zonas">▾ ' + zonasConMin.length + ' zonas</button>';
+    }
     html += '</div>';
-    // — Chips de zonas (opcionales) —
+    // — Chips de zonas (ocultos, se expanden con clic) —
     if (zonasConMin.length > 0) {
       var zoneChipsHtml = "";
       for (var zi = 0; zi < zonasConMin.length; zi++) {
@@ -2670,6 +2687,9 @@ function buildScheduleForDate(idx) {
       if (exExec) html += ' <span style="color:#4ade80;font-size:0.6rem">● ejecutado</span>';
       else        html += ' <span style="color:#9ca3af;font-size:0.6rem">○ programado</span>';
       html += '</span>';
+      if (ex.zonas && ex.zonas.length > 0) {
+        html += '<button class="sr-expand-btn" onclick="toggleSRZones(this)" title="Ver zonas">▾ ' + ex.zonas.length + ' zonas</button>';
+      }
       if (canEdit) {
         html += '<span style="display:flex;gap:4px;margin-left:auto;flex-shrink:0">';
         html += '<button onclick="openRiegoExtraModal(' + ex.id + ')" style="padding:2px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--blue);font-size:0.65rem;font-family:var(--font-mono);cursor:pointer">✎</button>';
@@ -2677,7 +2697,7 @@ function buildScheduleForDate(idx) {
         html += '</span>';
       }
       html += '</div>';
-      // — Chips de zonas —
+      // — Chips de zonas (ocultos) —
       if (ex.zonas && ex.zonas.length > 0) {
         var zxChips = "";
         for (var zi2 = 0; zi2 < ex.zonas.length; zi2++) {
