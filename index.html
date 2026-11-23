@@ -190,32 +190,21 @@
  color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
  }
  .schedule-row {
- padding: 10px 16px 12px;
+ padding: 6px 16px 8px;
  border-bottom: 1px solid var(--border);
  font-size: 0.82rem;
  transition: background .1s;
  }
  .schedule-row:last-child { border-bottom: none; }
  .schedule-row:hover { background: var(--green-glow); }
- /* Top line: hora + nombre sector */
- .sr-top {
- display: flex; align-items: center; gap: 10px;
- margin-bottom: 6px; flex-wrap: wrap;
- }
- .sr-name {
- font-weight: 600; font-size: 0.82rem; flex: 1;
- }
- .sr-dur-label {
- font-family: var(--font-mono); font-size: 0.65rem;
- color: var(--green); white-space: nowrap;
- }
+ /* Barra primero — protagonista visual */
  .sr-timeline {
  position: relative;
- height: 10px;
+ height: 16px;
  background: var(--panel2);
  border-radius: 6px;
  overflow: hidden;
- margin-bottom: 6px;
+ margin-bottom: 4px;
  border: 1px solid var(--border);
  }
  .sr-bar {
@@ -224,23 +213,36 @@
  border-radius: 6px;
  opacity: 0.85;
  }
+ /* Texto debajo de la barra — compacto y secundario */
+ .sr-top {
+ display: flex; align-items: center; gap: 8px;
+ margin-bottom: 4px; flex-wrap: wrap;
+ order: 2;
+ }
+ .sr-name {
+ font-weight: 600; font-size: 0.75rem; flex: 1; color: var(--muted);
+ }
+ .sr-dur-label {
+ font-family: var(--font-mono); font-size: 0.62rem;
+ color: var(--green); white-space: nowrap;
+ }
  .sr-zones {
- display: flex; flex-wrap: wrap; gap: 4px;
- margin-top: 4px;
+ display: flex; flex-wrap: wrap; gap: 3px;
+ margin-top: 2px;
  }
  .sr-zone-chip {
- font-family: var(--font-mono); font-size: 0.62rem;
- padding: 2px 7px; border-radius: 4px;
+ font-family: var(--font-mono); font-size: 0.58rem;
+ padding: 1px 5px; border-radius: 4px;
  background: var(--panel2); border: 1px solid var(--border);
  color: var(--text);
  }
  .sr-zone-chip span { color: var(--blue); margin-right: 3px; }
  .sr-zone-chip em { color: var(--green); font-style: normal; font-weight: 700; margin-left: 3px; }
  .time-tag {
- font-family: var(--font-mono); font-size: 0.7rem;
+ font-family: var(--font-mono); font-size: 0.65rem;
  color: var(--blue); background: #0ea5e910;
  border: 1px solid #0ea5e920;
- padding: 2px 7px; border-radius: 5px;
+ padding: 1px 6px; border-radius: 5px;
  display: inline-block;
  }
  .sector-tag {
@@ -2581,17 +2583,7 @@ function buildScheduleForDate(idx) {
     if (useHistory && esAnomalo)  rowStyle = "opacity:0.85;";
     if (useHistory && esLluvia)   rowStyle = "opacity:0.7;";
     html += '<div class="schedule-row" style="' + rowStyle + '">';
-    html += '<div class="sr-top">';
-    html += '<span class="time-tag">' + minToHHMM(startMin) + '</span>';
-    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel
-      + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '')
-      + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '')
-      + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '')
-      + (useHistory && esLluvia ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido</span>' : '')
-      + (esPrevSusp ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido (prev.)</span>' : '')
-      + '</span>';
-    html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
-    html += '</div>';
+    // — Barra primero (protagonista visual) —
     if (zonasConMin.length > 0) {
       var subBarsHtml = "";
       var cursor = startMin;
@@ -2604,16 +2596,31 @@ function buildScheduleForDate(idx) {
         cursor += (zz.min || 0);
       }
       html += '<div class="sr-timeline">' + subBarsHtml + '</div>';
+    } else {
+      html += '<div class="sr-timeline"><div class="sr-bar" style="left:' + leftPct + '%;width:' + widthPct + '%;background:' + color + '"></div></div>';
+    }
+    // — Texto debajo (secundario) —
+    html += '<div class="sr-top">';
+    html += '<span class="time-tag">' + minToHHMM(startMin) + '</span>';
+    html += '<span class="sr-name" style="color:' + color + '">' + nameLabel
+      + (isNewProg ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">+ nuevo</span>' : '')
+      + (useHistory && !ejecutado ? ' <span style="font-size:0.6rem;color:#fca5a5">❌ No ejecutado</span>' : '')
+      + (useHistory && esAnomalo ? ' <span style="font-size:0.6rem;background:#78350f;color:#fbbf24;padding:1px 5px;border-radius:4px">⚠️ Riego anómalo</span>' : '')
+      + (useHistory && esLluvia ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido</span>' : '')
+      + (esPrevSusp ? ' <span style="font-size:0.6rem;background:#1e3a5f;color:#93c5fd;padding:1px 5px;border-radius:4px">🌧 Suspendido (prev.)</span>' : '')
+      + '</span>';
+    html += '<span class="sr-dur-label">' + durMin + ' min · hasta ' + endStr + (useHistory && !isNewProg ? ' <span style="color:#4ade80;font-size:0.6rem">● real</span>' : '') + '</span>';
+    html += '</div>';
+    // — Chips de zonas (opcionales) —
+    if (zonasConMin.length > 0) {
       var zoneChipsHtml = "";
       for (var zi = 0; zi < zonasConMin.length; zi++) {
         var zz = zonasConMin[zi];
         zoneChipsHtml += '<div class="sr-zone-chip"><span>Z' + zz.id + '</span>' + (zz.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '<em>' + (zz.min||0) + 'min</em></div>';
       }
       html += '<div class="sr-zones">' + zoneChipsHtml + '</div>';
-    } else {
-      html += '<div class="sr-timeline"><div class="sr-bar" style="left:' + leftPct + '%;width:' + widthPct + '%;background:' + color + '"></div></div>';
     }
-    if (notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:4px">' + notas + '</div>';
+    if (notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:2px">' + notas + '</div>';
     html += '</div>';
   }
   var extras = (HISTORY[dateStr] && HISTORY[dateStr].extras) ? HISTORY[dateStr].extras : [];
@@ -2640,6 +2647,22 @@ function buildScheduleForDate(idx) {
       var exWPct   = Math.max(ex.dur / 1440 * 100, 0.8).toFixed(2);
       var canEdit  = (currentRole === "admin" || currentRole === "operador");
       html += '<div class="schedule-row" style="background:' + exBg + ';border-left:3px solid ' + exBorder + ';">';
+      // — Barra primero —
+      var exSubBars = "";
+      var exCursor = ex.start;
+      if (ex.zonas && ex.zonas.length > 0) {
+        for (var zi2 = 0; zi2 < ex.zonas.length; zi2++) {
+          var zx = ex.zonas[zi2];
+          var zxL = (exCursor / 1440 * 100).toFixed(2);
+          var zxW = Math.max((zx.min||0) / 1440 * 100, 0.4).toFixed(2);
+          exSubBars += '<div style="position:absolute;top:0;height:100%;left:' + zxL + '%;width:' + zxW + '%;background:' + exColor + ';opacity:' + (zi2%2===0?"0.9":"0.5") + '"></div>';
+          exCursor += (zx.min || 0);
+        }
+        html += '<div class="sr-timeline">' + exSubBars + '</div>';
+      } else {
+        html += '<div class="sr-timeline"><div class="sr-bar" style="left:' + exLPct + '%;width:' + exWPct + '%;background:' + exColor + '"></div></div>';
+      }
+      // — Texto debajo —
       html += '<div class="sr-top">';
       html += '<span class="time-tag">' + minToHHMM(ex.start) + '</span>';
       html += '<span class="sr-name" style="color:' + exColor + '">' + exIcon + ' ' + exLabel + ' · N°' + ex.sectorN + ' ' + ex.sectorName + exMetodoBadge + '</span>';
@@ -2654,27 +2677,16 @@ function buildScheduleForDate(idx) {
         html += '</span>';
       }
       html += '</div>';
-      var exSubBars = "";
-      var exCursor = ex.start;
+      // — Chips de zonas —
       if (ex.zonas && ex.zonas.length > 0) {
-        for (var zi2 = 0; zi2 < ex.zonas.length; zi2++) {
-          var zx = ex.zonas[zi2];
-          var zxL = (exCursor / 1440 * 100).toFixed(2);
-          var zxW = Math.max((zx.min||0) / 1440 * 100, 0.4).toFixed(2);
-          exSubBars += '<div style="position:absolute;top:0;height:100%;left:' + zxL + '%;width:' + zxW + '%;background:' + exColor + ';opacity:' + (zi2%2===0?"0.9":"0.5") + '"></div>';
-          exCursor += (zx.min || 0);
-        }
-        html += '<div class="sr-timeline">' + exSubBars + '</div>';
         var zxChips = "";
         for (var zi2 = 0; zi2 < ex.zonas.length; zi2++) {
           var zx = ex.zonas[zi2];
           zxChips += '<div class="sr-zone-chip" style="border-color:' + exBorder + '20"><span style="color:' + exColor + '">Z' + zx.id + '</span>' + (zx.label||"").replace(/^Z[^\s]+\s*/,"").slice(0,24) + '<em>' + (zx.min||0) + 'min</em></div>';
         }
         html += '<div class="sr-zones">' + zxChips + '</div>';
-      } else {
-        html += '<div class="sr-timeline"><div class="sr-bar" style="left:' + exLPct + '%;width:' + exWPct + '%;background:' + exColor + '"></div></div>';
       }
-      if (ex.notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:4px">' + ex.notas + '</div>';
+      if (ex.notas) html += '<div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:2px">' + ex.notas + '</div>';
       html += '</div>';
     }
   }
@@ -4341,11 +4353,6 @@ function saveToStorage() {
     climaThresholds: CLIMA_THRESHOLDS,
     savedAt: new Date().toISOString()
   };
-  saveToStorageWithRetry(data, 1);
-}
-
-function saveToStorageWithRetry(data, attempt) {
-  showSyncBadge(attempt === 1 ? "💾 Guardando..." : "🔄 Reintentando (" + attempt + "/3)...");
   fetch(FB_URL + ".json?auth=" + FB_SECRET, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -4353,51 +4360,12 @@ function saveToStorageWithRetry(data, attempt) {
   })
   .then(function(r) {
     if (r.ok) {
-      hideSaveError();
-      showSyncBadge("✓ Guardado");
+      showSyncBadge("✓ Sincronizado");
       saveClimaThresholds();
-    } else {
-      handleSaveFailure(data, attempt, "Error servidor " + r.status);
     }
+    else showSyncBadge("⚠ Error " + r.status);
   })
-  .catch(function() {
-    handleSaveFailure(data, attempt, "Sin conexión");
-  });
-}
-
-function handleSaveFailure(data, attempt, reason) {
-  if (attempt < 3) {
-    showSyncBadge("⚠ " + reason + " — reintentando en 10s...");
-    setTimeout(function() { saveToStorageWithRetry(data, attempt + 1); }, 10000);
-  } else {
-    showSyncBadge("⚠ No guardado");
-    showSaveError("⚠️ No se pudo guardar en Firebase (" + reason + "). Los datos están en memoria pero NO sincronizados. No cierres ni recargues la app.");
-  }
-}
-
-function showSaveError(msg) {
-  var el = document.getElementById("save-error-banner");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "save-error-banner";
-    el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-family:var(--font-mono);font-size:0.82rem;font-weight:700;padding:10px 16px;text-align:center;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.4)";
-    var txt = document.createElement("span");
-    txt.id = "save-error-text";
-    var btn = document.createElement("button");
-    btn.textContent = "🔄 Reintentar ahora";
-    btn.style.cssText = "background:#fff;color:#dc2626;border:none;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;white-space:nowrap";
-    btn.onclick = function() { hideSaveError(); saveToStorage(); };
-    el.appendChild(txt);
-    el.appendChild(btn);
-    document.body.insertBefore(el, document.body.firstChild);
-  }
-  document.getElementById("save-error-text").textContent = msg;
-  el.style.display = "flex";
-}
-
-function hideSaveError() {
-  var el = document.getElementById("save-error-banner");
-  if (el) el.style.display = "none";
+  .catch(function() { showSyncBadge("⚠ Sin conexión"); });
 }
 function saveClimaThresholds() {
   fetch(FB_URL + "/climaThresholds.json?auth=" + FB_SECRET, {
@@ -4472,61 +4440,8 @@ function showSyncBadge(msg) {
   bc.textContent = msg;
   bc.style.display = "inline-block";
   clearTimeout(syncTimer);
-  // Solo ocultar automáticamente si es mensaje de éxito, no si está en proceso
-  if (msg.indexOf("💾") === -1 && msg.indexOf("🔄") === -1) {
-    syncTimer = setTimeout(function() { bc.style.display = "none"; }, 4000);
-  }
+  syncTimer = setTimeout(function() { bc.style.display = "none"; }, 3000);
 }
-
-// ── Recarga de datos desde Firebase ─────────────────────────────────────────
-var autoRefreshTimer = null;
-var autoRefreshCountdownTimer = null;
-var AUTO_REFRESH_SEC = 300; // 5 minutos
-
-function refreshData() {
-  var btn = document.getElementById("btn-refresh-data");
-  if (btn) { btn.textContent = "⏳"; btn.disabled = true; }
-  loadFromStorage(function() {
-    var savedIdx = currentDateIdx;
-    buildPMR();
-    currentDateIdx = savedIdx;
-    buildScheduleForDate(currentDateIdx);
-    if (btn) { btn.textContent = "🔄"; btn.disabled = false; }
-    var cd = document.getElementById("refresh-countdown");
-    if (cd) cd.textContent = "actualizado";
-    setTimeout(function() {
-      var cd2 = document.getElementById("refresh-countdown");
-      if (cd2) cd2.textContent = "";
-    }, 2000);
-    resetAutoRefreshCountdown();
-  });
-}
-
-function resetAutoRefreshCountdown() {
-  clearInterval(autoRefreshCountdownTimer);
-  var remaining = AUTO_REFRESH_SEC;
-  autoRefreshCountdownTimer = setInterval(function() {
-    remaining--;
-    var cd = document.getElementById("refresh-countdown");
-    if (cd) {
-      var m = Math.floor(remaining / 60);
-      var s = remaining % 60;
-      cd.textContent = m + ":" + (s < 10 ? "0" : "") + s;
-    }
-    if (remaining <= 0) {
-      clearInterval(autoRefreshCountdownTimer);
-    }
-  }, 1000);
-}
-
-function startAutoRefresh() {
-  clearInterval(autoRefreshTimer);
-  autoRefreshTimer = setInterval(function() {
-    refreshData();
-  }, AUTO_REFRESH_SEC * 1000);
-  resetAutoRefreshCountdown();
-}
-
 function getNormalizedZonas(ev) {
   var raw = ev.zonas || ev.zonasConMin || [];
   var result = [];
@@ -5055,11 +4970,8 @@ function doLogin() {
   var bc = document.getElementById("role-badge-container");
   if (bc) {
     bc.innerHTML = '<span class="role-badge ' + info.cls + '">' + info.label + '</span>'
-      + ' <button id="btn-refresh-data" onclick="refreshData()" title="Recargar datos desde Firebase" style="background:rgba(74,140,28,0.15);border:1px solid rgba(74,140,28,0.4);border-radius:6px;color:var(--green);font-size:0.72rem;padding:2px 8px;cursor:pointer;font-family:var(--font-mono)">🔄</button>'
-      + ' <span id="refresh-countdown" style="font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);margin-left:2px"></span>'
       + (role === "admin" ? ' <span id="sync-badge" style="display:none;font-family:var(--font-mono);font-size:0.6rem;color:var(--green);margin-left:6px"></span>' : '');
   }
-  startAutoRefresh();
   var loginBtn = document.querySelector("#login-screen button");
   if (loginBtn) loginBtn.textContent = "Cargando datos...";
   loadFromStorage(function() {
